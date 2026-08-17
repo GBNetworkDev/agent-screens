@@ -1,0 +1,23 @@
+[Unit]
+Description=Agent Screen desktop %i
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=agent
+Group=agent
+WorkingDirectory=/workspace
+ExecStart=/usr/bin/tini -- /opt/agent-screen/bin/start_screen.py %i
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=10
+KillMode=control-group
+NoNewPrivileges=true
+PrivateTmp=false
+ProtectSystem=strict
+ProtectHome=false
+ReadWritePaths=/home/agent /tmp
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Runtime and local state
+.env
+.env.*
+*.local
+*.log
+*.pid
+*.sock
+
+# Browser and desktop state
+chrome-profile-*/
+.config-screen-*/
+.cache-screen-*/
+
+# Generated verification artifacts
+evidence/
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store

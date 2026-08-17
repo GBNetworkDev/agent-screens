@@ -1,0 +1,7 @@
+[Unit]
+Description=Apply Agent Screen day/night wallpaper
+After=agent-screen@1.service agent-screen@2.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/agent-screen/bin/apply_wallpaper.py

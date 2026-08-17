@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Terminal
+Comment=Open terminal in /workspace
+Icon=org.xfce.terminal
+Exec=xfce4-terminal --working-directory=/workspace
+Terminal=false
+StartupNotify=true
+Categories=System;TerminalEmulator;

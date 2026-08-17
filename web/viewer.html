@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>Screen</title>
+  <style>
+    html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#1e2330}
+    body{display:flex}
+    canvas{outline:none}
+  </style>
+</head>
+<body>
+<script type="module">
+  import RFB from "./core/rfb.js";
+
+  const match = location.pathname.match(/^\/screen\/([12])\/?$/);
+  if (!match) throw new Error("Invalid screen path");
+
+  const screenNumber = match[1];
+  const socketURL = `wss://${location.host}/screen/${screenNumber}/websockify`;
+  let rfb = null;
+  let reconnectTimer = null;
+
+  function connect() {
+    clearTimeout(reconnectTimer);
+    rfb = new RFB(document.body, socketURL);
+    rfb.scaleViewport = true;
+    rfb.resizeSession = false;
+    rfb.showDotCursor = true;
+    rfb.addEventListener("disconnect", () => {
+      rfb = null;
+      reconnectTimer = setTimeout(connect, 2000);
+    }, { once: true });
+  }
+
+  connect();
+</script>
+</body>
+</html>

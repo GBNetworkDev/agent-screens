@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Thunar File Manager
+Comment=Open shared workspace
+Icon=/usr/share/icons/hicolor/128x128/apps/org.xfce.thunar.png
+Exec=thunar /workspace
+Terminal=false
+StartupNotify=true
+Categories=System;FileTools;FileManager;

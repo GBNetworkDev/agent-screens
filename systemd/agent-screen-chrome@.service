@@ -1,0 +1,22 @@
+[Unit]
+Description=Google Chrome for Agent Screen %i
+Requires=agent-screen@%i.service
+After=agent-screen@%i.service
+
+[Service]
+Type=simple
+User=agent
+Group=agent
+WorkingDirectory=/workspace
+ExecStart=/opt/agent-screen/bin/start_chrome.py %i
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=10
+KillMode=control-group
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=false
+ReadWritePaths=/home/agent /tmp
+
+[Install]
+WantedBy=multi-user.target

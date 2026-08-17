@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Google Chrome
+Comment=Open Chrome with this Screen's persistent profile
+Icon=google-chrome
+Exec=/opt/agent-screen/bin/start_chrome.py
+Terminal=false
+StartupNotify=true
+StartupWMClass=agent-chrome
+Categories=Network;WebBrowser;
