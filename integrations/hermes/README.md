@@ -106,6 +106,20 @@ hermes gateway restart
 
 Start a new chat session after changing tool schemas. Direct MCP tools remain available as `cua_screen1` through `cua_screen4`, while built-in `computer_use` uses the selected default wrapper.
 
+## 5. Specialist status ownership
+
+Status ownership follows the actual worker, not only the orchestrator that received the user request.
+
+When an orchestrator assigns work to a specialist profile or performs the work through that specialist's Screen, browser, or tools:
+
+1. Publish the specialist's `working` state with a bounded, PII-safe task label **before the first specialist work action**.
+2. The orchestrator may remain `working` concurrently while coordinating or validating the task.
+3. On completion or interruption, publish the specialist's terminal state as `idle`, `waiting_approval`, or `error`, as applicable.
+4. Do not leave a specialist at READY/idle while their assigned task is actively executing.
+5. Ignore internal/background forks that are not the actual user-visible worker.
+
+Apply this lifecycle independently to every specialist Screen. Status publishing must remain best-effort and must not block or change the outcome of the underlying work.
+
 ## Verification
 
 ```bash

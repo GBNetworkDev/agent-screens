@@ -26,13 +26,43 @@ class AgentScreenStatusIntegrationTests(unittest.TestCase):
     def setUp(self):
         self.module: Any = load_plugin()
         self.module._ACTIVE_TURNS.clear()
+        if hasattr(self.module, "_SPECIALIST_ACTIVE_TURNS"):
+            for turns in self.module._SPECIALIST_ACTIVE_TURNS.values():
+                turns.clear()
+        if hasattr(self.module, "_SPECIALIST_TURN_SCREENS"):
+            self.module._SPECIALIST_TURN_SCREENS.clear()
+        if hasattr(self.module, "_SPECIALIST_ERRORS"):
+            self.module._SPECIALIST_ERRORS.clear()
+        if hasattr(self.module, "_SPECIALIST_LATCHED_ERRORS"):
+            self.module._SPECIALIST_LATCHED_ERRORS.clear()
         self.events = []
+        self.specialist_events = []
         self.original_publish = self.module._publish
         self.module._publish = lambda state, task: self.events.append((state, task))
+        self.original_publish_specialist = getattr(
+            self.module, "_publish_specialist", None
+        )
+        if self.original_publish_specialist is not None:
+            self.module._publish_specialist = (
+                lambda screen, state, task: self.specialist_events.append(
+                    (screen, state, task)
+                )
+            )
 
     def tearDown(self):
         self.module._publish = self.original_publish
+        if self.original_publish_specialist is not None:
+            self.module._publish_specialist = self.original_publish_specialist
         self.module._ACTIVE_TURNS.clear()
+        if hasattr(self.module, "_SPECIALIST_ACTIVE_TURNS"):
+            for turns in self.module._SPECIALIST_ACTIVE_TURNS.values():
+                turns.clear()
+        if hasattr(self.module, "_SPECIALIST_TURN_SCREENS"):
+            self.module._SPECIALIST_TURN_SCREENS.clear()
+        if hasattr(self.module, "_SPECIALIST_ERRORS"):
+            self.module._SPECIALIST_ERRORS.clear()
+        if hasattr(self.module, "_SPECIALIST_LATCHED_ERRORS"):
+            self.module._SPECIALIST_LATCHED_ERRORS.clear()
 
     def test_integration_is_complete_and_sanitized(self):
         paths = [
@@ -47,6 +77,9 @@ class AgentScreenStatusIntegrationTests(unittest.TestCase):
         installer = (PLUGIN_DIR / "install.sh").read_text()
         docs = (PLUGIN_DIR / "README.md").read_text()
         self.assertIn("AGENT_SCREEN_STATUS_PUBLISHER", combined)
+        self.assertIn("AGENT_SCREEN_STATUS_PUBLISHER_2", combined)
+        self.assertIn("AGENT_SCREEN_STATUS_PUBLISHER_3", combined)
+        self.assertIn("AGENT_SCREEN_STATUS_PUBLISHER_4", combined)
         self.assertIn('command -v hermes', installer)
         self.assertIn("systemctl --user edit hermes-gateway.service", docs)
         for forbidden in ("/root/", "id_ed25519"):
@@ -340,6 +373,166 @@ class AgentScreenStatusIntegrationTests(unittest.TestCase):
         self.assertEqual(
             self.events[-1], ("error", "Approval not granted — ready for review")
         )
+
+    def test_screen_two_tool_lifecycle_stays_working_until_session_end(self):
+        turn = {"platform": "telegram", "turn_id": "t1"}
+        self.module._pre_llm_call(**turn)
+        self.module._pre_tool_call(
+            tool_name="mcp__cua_screen2__get_browser_state", turn_id="t1"
+        )
+        self.module._post_tool_call(
+            tool_name="mcp__cua_screen2__get_browser_state",
+            turn_id="t1", status="ok",
+        )
+        self.assertEqual(self.specialist_events, [
+            (2, "working", "Reviewing recruitment workspace")
+        ])
+        self.module._on_session_end(**turn, completed=True, failed=False)
+        self.assertEqual(self.specialist_events[-1], (
+            2, "idle", "Ready for recruitment review"
+        ))
+
+    def test_screen_three_and_four_tools_map_to_correct_specialists(self):
+        turn = {"platform": "telegram", "turn_id": "t1"}
+        self.module._pre_llm_call(**turn)
+        self.module._pre_tool_call(
+            tool_name="mcp__cua_screen3__get_browser_state", turn_id="t1"
+        )
+        self.module._pre_tool_call(
+            tool_name="mcp__cua_screen4__capture", turn_id="t1"
+        )
+        self.assertEqual(self.specialist_events, [
+            (3, "working", "Working in GBAsset workspace"),
+            (4, "working", "Working on product design"),
+        ])
+        self.module._on_session_end(**turn, completed=True, failed=False)
+        self.assertEqual(self.specialist_events[-2:], [
+            (3, "idle", "Ready for GBAsset work"),
+            (4, "idle", "Ready for product design work"),
+        ])
+
+    def test_untracked_and_screen_one_tools_do_not_publish_specialists(self):
+        self.module._pre_tool_call(
+            tool_name="mcp__cua_screen2__get_browser_state", turn_id="background"
+        )
+        self.module._pre_llm_call(platform="telegram", turn_id="t1")
+        self.module._pre_tool_call(
+            tool_name="mcp__cua_screen1__get_browser_state", turn_id="t1"
+        )
+        self.module._pre_tool_call(tool_name="terminal", turn_id="t1")
+        self.assertEqual(self.specialist_events, [])
+
+    def test_specialist_tool_error_is_latched_through_session_end(self):
+        turn = {"platform": "telegram", "turn_id": "t1"}
+        self.module._pre_llm_call(**turn)
+        self.module._pre_tool_call(
+            tool_name="mcp__cua_screen3__capture", turn_id="t1"
+        )
+        self.module._post_tool_call(
+            tool_name="mcp__cua_screen3__capture", turn_id="t1",
+            status="error", error_message="raw private downstream detail",
+        )
+        self.assertEqual(self.specialist_events[-1], (
+            3, "error", "Specialist tool failed — ready for review"
+        ))
+        self.module._on_session_end(**turn, completed=True, failed=False)
+        self.assertEqual(self.specialist_events[-1], (
+            3, "error", "Specialist tool failed — ready for review"
+        ))
+
+    def test_specialist_timeout_and_cancellation_fail_closed(self):
+        for status in ("timeout", "cancelled"):
+            with self.subTest(status=status):
+                turn_id = f"turn-{status}"
+                turn = {"platform": "telegram", "turn_id": turn_id}
+                self.module._pre_llm_call(**turn)
+                self.module._pre_tool_call(
+                    tool_name="mcp__cua_screen2__get_browser_state",
+                    turn_id=turn_id,
+                )
+                self.module._post_tool_call(
+                    tool_name="mcp__cua_screen2__get_browser_state",
+                    turn_id=turn_id, status=status,
+                )
+                self.module._on_session_end(
+                    **turn, completed=True, failed=False
+                )
+                self.assertEqual(self.specialist_events[-1], (
+                    2, "error", "Specialist tool failed — ready for review"
+                ))
+
+    def test_specialist_session_failure_and_interruption_fail_closed(self):
+        outcomes = (
+            ({"completed": False, "failed": True},
+             "Specialist task failed — ready for review"),
+            ({"completed": False, "interrupted": True},
+             "Specialist task interrupted — ready for review"),
+        )
+        for index, (outcome, expected) in enumerate(outcomes):
+            with self.subTest(outcome=outcome):
+                turn_id = f"terminal-{index}"
+                turn = {"platform": "telegram", "turn_id": turn_id}
+                self.module._pre_llm_call(**turn)
+                self.module._pre_tool_call(
+                    tool_name="mcp__cua_screen4__capture", turn_id=turn_id
+                )
+                self.module._on_session_end(**turn, **outcome)
+                self.assertEqual(
+                    self.specialist_events[-1], (4, "error", expected)
+                )
+
+    def test_specialist_follows_approval_wait_and_resume(self):
+        turn = {"platform": "telegram", "turn_id": "t1"}
+        self.module._pre_llm_call(**turn)
+        self.module._pre_tool_call(
+            tool_name="mcp__cua_screen4__capture", turn_id="t1"
+        )
+        self.module._pre_approval_request(surface="gateway", turn_id="t1")
+        self.module._post_approval_response(
+            surface="gateway", turn_id="t1", choice="once"
+        )
+        self.assertEqual(self.specialist_events[-2:], [
+            (4, "waiting_approval", "Waiting for owner approval"),
+            (4, "working", "Continuing approved task"),
+        ])
+
+    def test_iris_latched_error_does_not_leave_other_specialist_waiting(self):
+        first = {"platform": "telegram", "turn_id": "t1"}
+        second = {"platform": "telegram", "turn_id": "t2"}
+        self.module._pre_llm_call(**first)
+        self.module._pre_llm_call(**second)
+        self.module._pre_tool_call(
+            tool_name="mcp__cua_screen4__capture", turn_id="t2"
+        )
+        self.module._pre_approval_request(surface="gateway", turn_id="t2")
+        self.module._post_approval_response(
+            surface="gateway", turn_id="t1", choice="deny"
+        )
+        self.module._post_approval_response(
+            surface="gateway", turn_id="t2", choice="once"
+        )
+        self.assertEqual(self.specialist_events[-1], (
+            4, "working", "Continuing approved task"
+        ))
+
+    def test_overlapping_specialist_turns_do_not_idle_early(self):
+        first = {"platform": "telegram", "turn_id": "t1"}
+        second = {"platform": "telegram", "turn_id": "t2"}
+        self.module._pre_llm_call(**first)
+        self.module._pre_tool_call(
+            tool_name="mcp__cua_screen2__get_browser_state", turn_id="t1"
+        )
+        self.module._pre_llm_call(**second)
+        self.module._pre_tool_call(
+            tool_name="mcp__cua_screen2__get_browser_state", turn_id="t2"
+        )
+        self.specialist_events.clear()
+        self.module._on_session_end(**first, completed=True, failed=False)
+        self.assertEqual(self.specialist_events, [])
+        self.module._on_session_end(**second, completed=True, failed=False)
+        self.assertEqual(self.specialist_events, [
+            (2, "idle", "Ready for recruitment review")
+        ])
 
 
 if __name__ == "__main__":

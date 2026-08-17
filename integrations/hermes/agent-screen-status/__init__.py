@@ -12,6 +12,32 @@ import threading
 from typing import Any
 
 _PUBLISHER = os.environ.get("AGENT_SCREEN_STATUS_PUBLISHER", "iris-screen-status")
+_SPECIALISTS = {
+    2: {
+        "publisher": os.environ.get(
+            "AGENT_SCREEN_STATUS_PUBLISHER_2", "tara-screen-status"
+        ),
+        "tool_prefix": "mcp__cua_screen2__",
+        "working": "Reviewing recruitment workspace",
+        "idle": "Ready for recruitment review",
+    },
+    3: {
+        "publisher": os.environ.get(
+            "AGENT_SCREEN_STATUS_PUBLISHER_3", "atlas-screen-status"
+        ),
+        "tool_prefix": "mcp__cua_screen3__",
+        "working": "Working in GBAsset workspace",
+        "idle": "Ready for GBAsset work",
+    },
+    4: {
+        "publisher": os.environ.get(
+            "AGENT_SCREEN_STATUS_PUBLISHER_4", "mira-screen-status"
+        ),
+        "tool_prefix": "mcp__cua_screen4__",
+        "working": "Working on product design",
+        "idle": "Ready for product design work",
+    },
+}
 _SUPPORTED_PLATFORMS = {
     value.strip().lower()
     for value in os.environ.get(
@@ -24,10 +50,17 @@ _APPROVAL_SURFACES = {"gateway", "cli", "smart"}
 _APPROVED_CHOICES = {"always", "approve", "approved", "once", "session", "smart_approve"}
 _DENIED_CHOICES = {"deny", "denied", "smart_deny"}
 _TIMEOUT_CHOICES = {"timed_out", "timeout"}
+_FAILED_TOOL_STATUSES = {"error", "blocked", "timeout", "cancelled"}
 _LOCK = threading.Lock()
 _ACTIVE_TURNS: set[str] = set()
 _TERMINAL_ERRORS: dict[str, str] = {}
 _LATCHED_ERROR: str | None = None
+_SPECIALIST_ACTIVE_TURNS: dict[int, set[str]] = {
+    screen: set() for screen in _SPECIALISTS
+}
+_SPECIALIST_TURN_SCREENS: dict[str, set[int]] = {}
+_SPECIALIST_ERRORS: dict[tuple[str, int], str] = {}
+_SPECIALIST_LATCHED_ERRORS: dict[int, str] = {}
 
 
 def _turn_key(kwargs: dict[str, Any]) -> str:
@@ -100,6 +133,111 @@ def _publish(state: str, task: str) -> None:
         pass
 
 
+def _publish_specialist(screen: int, state: str, task: str) -> None:
+    """Publish one specialist state without exposing tool args or results."""
+    specialist = _SPECIALISTS.get(screen)
+    if specialist is None:
+        return
+    try:
+        subprocess.run(
+            [str(specialist["publisher"]), state, task],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=8,
+            check=False,
+        )
+    except Exception:
+        # Specialist observability is best-effort and must never affect work.
+        pass
+
+
+def _specialist_screen(tool_name: Any) -> int | None:
+    name = str(tool_name or "")
+    for screen, specialist in _SPECIALISTS.items():
+        if name.startswith(str(specialist["tool_prefix"])):
+            return screen
+    return None
+
+
+def _tracked_turn_key(kwargs: dict[str, Any]) -> str | None:
+    key = str(kwargs.get("turn_id") or "").strip()
+    return key or None
+
+
+def _pre_tool_call(**kwargs: Any) -> None:
+    screen = _specialist_screen(kwargs.get("tool_name"))
+    key = _tracked_turn_key(kwargs)
+    if screen is None or key is None:
+        return
+    with _LOCK:
+        # Only owner-visible turns admitted by pre_llm_call may own a Screen.
+        if key not in _ACTIVE_TURNS:
+            return
+        screens = _SPECIALIST_TURN_SCREENS.setdefault(key, set())
+        first_use = screen not in screens
+        screens.add(screen)
+        _SPECIALIST_ACTIVE_TURNS[screen].add(key)
+        if not first_use:
+            return
+        latched = _SPECIALIST_LATCHED_ERRORS.get(screen)
+        if latched:
+            _publish_specialist(screen, "error", latched)
+        else:
+            _publish_specialist(
+                screen, "working", str(_SPECIALISTS[screen]["working"])
+            )
+
+
+def _post_tool_call(**kwargs: Any) -> None:
+    screen = _specialist_screen(kwargs.get("tool_name"))
+    key = _tracked_turn_key(kwargs)
+    if screen is None or key is None:
+        return
+    status = str(kwargs.get("status") or "").strip().lower()
+    if status not in _FAILED_TOOL_STATUSES:
+        return
+    message = "Specialist tool failed — ready for review"
+    with _LOCK:
+        if screen not in _SPECIALIST_TURN_SCREENS.get(key, set()):
+            return
+        _SPECIALIST_ERRORS.setdefault((key, screen), message)
+        _SPECIALIST_LATCHED_ERRORS.setdefault(screen, message)
+        _publish_specialist(screen, "error", message)
+
+
+def _finish_specialists_for_turn(
+    key: str, *, interrupted: bool = False, failed: bool = False
+) -> None:
+    screens = _SPECIALIST_TURN_SCREENS.pop(key, set())
+    for screen in sorted(screens):
+        active = _SPECIALIST_ACTIVE_TURNS[screen]
+        active.discard(key)
+        terminal_error = _SPECIALIST_ERRORS.pop((key, screen), None)
+        if terminal_error:
+            _SPECIALIST_LATCHED_ERRORS.setdefault(screen, terminal_error)
+        elif interrupted:
+            _SPECIALIST_LATCHED_ERRORS.setdefault(
+                screen, "Specialist task interrupted — ready for review"
+            )
+        elif failed:
+            _SPECIALIST_LATCHED_ERRORS.setdefault(
+                screen, "Specialist task failed — ready for review"
+            )
+        if active:
+            latched = _SPECIALIST_LATCHED_ERRORS.get(screen)
+            if latched:
+                _publish_specialist(screen, "error", latched)
+            continue
+        latched = _SPECIALIST_LATCHED_ERRORS.pop(screen, None)
+        if latched:
+            _publish_specialist(screen, "error", latched)
+        else:
+            _publish_specialist(
+                screen, "idle", str(_SPECIALISTS[screen]["idle"])
+            )
+
+
 def _publish_unless_latched(state: str, task: str) -> None:
     if _LATCHED_ERROR:
         _publish("error", _LATCHED_ERROR)
@@ -139,6 +277,9 @@ def _finish_turn(*, interrupted: bool = False, failed: bool = False, **kwargs: A
             _LATCHED_ERROR = "Turn interrupted — ready for review"
         elif failed and _LATCHED_ERROR is None:
             _LATCHED_ERROR = "Turn failed — ready for review"
+        _finish_specialists_for_turn(
+            key, interrupted=interrupted, failed=failed
+        )
         if _ACTIVE_TURNS:
             return
         if _LATCHED_ERROR:
@@ -185,6 +326,38 @@ def _pre_approval_request(**kwargs: Any) -> None:
             _publish_unless_latched(
                 "waiting_approval", "Waiting for owner approval"
             )
+            for screen in sorted(_SPECIALIST_TURN_SCREENS.get(key, set())):
+                latched = _SPECIALIST_LATCHED_ERRORS.get(screen)
+                if latched:
+                    _publish_specialist(screen, "error", latched)
+                else:
+                    _publish_specialist(
+                        screen, "waiting_approval", "Waiting for owner approval"
+                    )
+
+
+def _post_specialist_approval(key: str, choice: str) -> None:
+    """Advance tracked specialists independently of Iris-wide error state."""
+    for screen in sorted(_SPECIALIST_TURN_SCREENS.get(key, set())):
+        latched = _SPECIALIST_LATCHED_ERRORS.get(screen)
+        if choice in _APPROVED_CHOICES and not latched:
+            _publish_specialist(screen, "working", "Continuing approved task")
+            continue
+        if latched:
+            specialist_error = latched
+        elif choice == "notify_failed":
+            specialist_error = "Approval notification failed — ready for review"
+        elif choice.startswith("transport_"):
+            specialist_error = "Approval transport failed — ready for review"
+        elif choice in _DENIED_CHOICES or choice in _TIMEOUT_CHOICES:
+            specialist_error = "Approval not granted — ready for review"
+        elif choice not in _APPROVED_CHOICES:
+            specialist_error = "Unknown approval outcome — ready for review"
+        else:
+            continue
+        _SPECIALIST_ERRORS.setdefault((key, screen), specialist_error)
+        _SPECIALIST_LATCHED_ERRORS.setdefault(screen, specialist_error)
+        _publish_specialist(screen, "error", specialist_error)
 
 
 def _post_approval_response(**kwargs: Any) -> None:
@@ -200,6 +373,7 @@ def _post_approval_response(**kwargs: Any) -> None:
             return
         if _LATCHED_ERROR:
             _publish("error", _LATCHED_ERROR)
+            _post_specialist_approval(key, choice)
             return
         if choice == "notify_failed":
             message = "Approval notification failed — ready for review"
@@ -231,6 +405,7 @@ def _post_approval_response(**kwargs: Any) -> None:
             if _LATCHED_ERROR is None:
                 _LATCHED_ERROR = message
             _publish("error", message)
+        _post_specialist_approval(key, choice)
 
 
 def _on_session_start(**kwargs: Any) -> None:
@@ -245,6 +420,8 @@ def _on_session_start(**kwargs: Any) -> None:
 def register(ctx: Any) -> None:
     ctx.register_hook("on_session_start", _on_session_start)
     ctx.register_hook("pre_llm_call", _pre_llm_call)
+    ctx.register_hook("pre_tool_call", _pre_tool_call)
+    ctx.register_hook("post_tool_call", _post_tool_call)
     ctx.register_hook("post_llm_call", _post_llm_call)
     ctx.register_hook("on_session_end", _on_session_end)
     ctx.register_hook("pre_approval_request", _pre_approval_request)

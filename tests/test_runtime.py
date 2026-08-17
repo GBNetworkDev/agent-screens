@@ -226,6 +226,10 @@ class ScreenRuntimeTests(unittest.TestCase):
         self.assertIn("screens.example.com", docs)
         self.assertIn("cua_screen1", docs)
         self.assertIn("cua_screen2", docs)
+        self.assertIn("Status ownership follows the actual worker", docs)
+        self.assertIn("before the first specialist work action", docs)
+        self.assertIn("`working`", docs)
+        self.assertIn("`idle`, `waiting_approval`, or `error`", docs)
         ipv4_addresses = set(re.findall(r"\b(?:\d{1,3}\.){3}\d{1,3}\b", combined))
         documentation_prefixes = ("192.0.2.", "198.51.100.", "203.0.113.")
         self.assertTrue(
