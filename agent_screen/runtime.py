@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+from pathlib import Path
+import time
 
 
 @dataclass(frozen=True)
@@ -46,6 +48,29 @@ def screen_id_from_display(display: str) -> int:
     screen_id = int(number)
     ScreenSpec.from_id(screen_id)
     return screen_id
+
+
+def read_session_environment(
+    path: Path,
+    attempts: int = 100,
+    delay: float = 0.1,
+    sleep=time.sleep,
+) -> dict[str, str]:
+    required = {"DISPLAY", "DBUS_SESSION_BUS_ADDRESS", "XDG_RUNTIME_DIR"}
+    for attempt in range(attempts):
+        try:
+            values = dict(
+                line.split("=", 1)
+                for line in path.read_text().splitlines()
+                if "=" in line
+            )
+        except FileNotFoundError:
+            values = {}
+        if required <= values.keys():
+            return values
+        if attempt + 1 < attempts:
+            sleep(delay)
+    raise TimeoutError(f"desktop session environment did not become ready: {path}")
 
 
 def dock_launcher_specs() -> tuple[tuple[str, str], ...]:

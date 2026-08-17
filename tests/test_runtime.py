@@ -104,6 +104,33 @@ class ScreenRuntimeTests(unittest.TestCase):
             "/home/agent/.local/share/applications/agent-chrome.desktop",
         )
 
+    def test_session_environment_waits_for_desktop_readiness(self):
+        from agent_screen.runtime import read_session_environment
+
+        with tempfile.TemporaryDirectory() as directory:
+            env_file = Path(directory) / "session.env"
+            sleep_calls = []
+
+            def create_environment(_delay):
+                sleep_calls.append(1)
+                env_file.write_text(
+                    "DISPLAY=:1\n"
+                    "DBUS_SESSION_BUS_ADDRESS=unix:path=/tmp/dbus-test\n"
+                    "XDG_RUNTIME_DIR=/tmp/agent-screen-runtime-1\n"
+                )
+
+            env = read_session_environment(
+                env_file,
+                attempts=2,
+                delay=0,
+                sleep=create_environment,
+            )
+
+        self.assertEqual(len(sleep_calls), 1)
+        self.assertEqual(env["DISPLAY"], ":1")
+        self.assertEqual(env["DBUS_SESSION_BUS_ADDRESS"], "unix:path=/tmp/dbus-test")
+        self.assertEqual(env["XDG_RUNTIME_DIR"], "/tmp/agent-screen-runtime-1")
+
     def test_dock_layout_is_locked_to_three_ordered_launchers(self):
         from agent_screen.runtime import dock_item_names, dock_launcher_specs
         self.assertEqual(
