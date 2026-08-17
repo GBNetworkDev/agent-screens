@@ -156,6 +156,20 @@ class ScreenRuntimeTests(unittest.TestCase):
         desktop = (ROOT / "desktop/agent-files.desktop").read_text()
         self.assertIn("Name=Thunar File Manager", desktop)
         self.assertNotIn("Name=Files\n", desktop)
+    def test_screen_two_cua_service_is_persistent_and_isolated(self):
+        service = (ROOT / "systemd/agent-screen-cua-screen2.service").read_text()
+        launcher = (ROOT / "bin/start_cua_screen.sh").read_text()
+
+        self.assertIn("After=agent-screen@2.service", service)
+        self.assertIn("Requires=agent-screen@2.service", service)
+        self.assertIn("ExecStart=/usr/local/libexec/start-cua-screen 2", service)
+        self.assertIn("WantedBy=multi-user.target", service)
+        self.assertIn('DISPLAY=":${screen_id}"', launcher)
+        self.assertIn("session.env", launcher)
+        self.assertIn('cua-driver-screen2.sock', launcher)
+        self.assertIn('cua-driver.sock', launcher)
+        self.assertNotIn("0.0.0.0", launcher + service)
+
     def test_clean_viewer_and_landing_have_no_legacy_novnc_pages(self):
         viewer = (ROOT / "web/viewer.html").read_text()
         landing = (ROOT / "web/index.html").read_text()

@@ -1,0 +1,18 @@
+[Unit]
+Description=CUA Driver for Agent Screen 2
+After=agent-screen@2.service
+Requires=agent-screen@2.service
+
+[Service]
+Type=simple
+User=agent
+Group=agent
+ExecStart=/usr/local/libexec/start-cua-screen 2
+Restart=on-failure
+RestartSec=2
+TimeoutStopSec=10
+NoNewPrivileges=true
+PrivateTmp=false
+
+[Install]
+WantedBy=multi-user.target

@@ -47,6 +47,7 @@ A Debian-based Linux host with:
 - Google Chrome
 - Nginx and a valid TLS certificate
 - An unprivileged `agent` user
+- Optional: `cua-driver` installed at `/home/agent/.local/bin/cua-driver` for persistent Computer Use
 
 ## Quick start
 
@@ -62,10 +63,14 @@ A Debian-based Linux host with:
 8. Reload systemd and start the screens:
 
 ```bash
+sudo install -o root -g root -m 0755 bin/start_cua_screen.sh /usr/local/libexec/start-cua-screen
 sudo systemctl daemon-reload
 sudo systemctl enable --now agent-screen@1 agent-screen@2
 sudo systemctl enable --now agent-screen-chrome@1 agent-screen-chrome@2
+sudo systemctl enable --now agent-screen-cua-screen2.service  # optional
 ```
+
+The Screen 2 CUA unit uses `/home/agent/.cache/cua-driver/cua-driver-screen2.sock`, keeping it isolated from any existing Screen 1 CUA socket.
 
 Set the hostname used by the operator CLI through the service environment or shell:
 
