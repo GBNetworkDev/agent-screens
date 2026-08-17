@@ -2,15 +2,33 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#1e2330">
   <title>Screen</title>
   <style>
+    *{box-sizing:border-box}
     html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#1e2330}
     body{display:flex}
     canvas{outline:none}
+    #mobile-keyboard{position:fixed;z-index:20;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));display:flex;align-items:center;gap:8px;font:600 14px/1 system-ui,-apple-system,sans-serif}
+    #mobile-keyboard button{min-height:44px;border:1px solid #ffffff2c;border-radius:12px;padding:0 14px;background:#111827e8;color:#f8fafc;box-shadow:0 8px 24px #0008;touch-action:manipulation}
+    #mobile-keyboard-button{font-size:18px;min-width:48px;padding:0 12px}
+    #mobile-keyboard-panel{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #ffffff2c;border-radius:14px;background:#0f172aeF;box-shadow:0 10px 30px #0009}
+    #mobile-keyboard-panel[hidden]{display:none}
+    #mobile-keyboard-input{width:min(56vw,280px);height:44px;border:1px solid #64748b;border-radius:10px;padding:0 12px;background:#f8fafc;color:#0f172a;font:500 16px/1 system-ui,-apple-system,sans-serif;outline:none}
+    #mobile-keyboard-input:focus{border-color:#60a5fa;box-shadow:0 0 0 3px #3b82f633}
+    @media (pointer:fine) and (min-width:900px){#mobile-keyboard{opacity:.3;transition:opacity .15s}#mobile-keyboard:hover,#mobile-keyboard:focus-within{opacity:1}}
   </style>
 </head>
 <body>
+  <div id="mobile-keyboard" aria-label="Remote keyboard controls">
+    <div id="mobile-keyboard-panel" hidden>
+      <input id="mobile-keyboard-input" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Type on remote screen" placeholder="Type on remote…">
+      <button id="mobile-keyboard-done" type="button">Done</button>
+    </div>
+    <button id="mobile-keyboard-button" type="button" aria-label="Open mobile keyboard" aria-expanded="false">⌨</button>
+  </div>
+
 <script type="module">
   import RFB from "./core/rfb.js";
 
@@ -19,8 +37,13 @@
 
   const screenNumber = match[1];
   const socketURL = `wss://${location.host}/screen/${screenNumber}/websockify`;
+  const keyboardButton = document.getElementById("mobile-keyboard-button");
+  const keyboardPanel = document.getElementById("mobile-keyboard-panel");
+  const keyboardInput = document.getElementById("mobile-keyboard-input");
+  const keyboardDone = document.getElementById("mobile-keyboard-done");
   let rfb = null;
   let reconnectTimer = null;
+  let composing = false;
 
   function connect() {
     clearTimeout(reconnectTimer);
@@ -33,6 +56,53 @@
       reconnectTimer = setTimeout(connect, 2000);
     }, { once: true });
   }
+
+  function sendText(text) {
+    if (!rfb) return;
+    for (const character of text) {
+      const codepoint = character.codePointAt(0);
+      const keysym = codepoint <= 0xff ? codepoint : 0x01000000 | codepoint;
+      rfb.sendKey(keysym);
+    }
+  }
+
+  function openKeyboard() {
+    keyboardPanel.hidden = false;
+    keyboardButton.setAttribute("aria-expanded", "true");
+    keyboardInput.focus({ preventScroll: true });
+  }
+
+  function closeKeyboard() {
+    keyboardInput.value = "";
+    keyboardPanel.hidden = true;
+    keyboardButton.setAttribute("aria-expanded", "false");
+    rfb?.focus({ preventScroll: true });
+  }
+
+  keyboardButton.addEventListener("click", () => {
+    if (keyboardPanel.hidden) openKeyboard(); else closeKeyboard();
+  });
+  keyboardDone.addEventListener("click", closeKeyboard);
+  keyboardInput.addEventListener("compositionstart", () => { composing = true; });
+  keyboardInput.addEventListener("compositionend", () => {
+    composing = false;
+    sendText(keyboardInput.value);
+    keyboardInput.value = "";
+  });
+  keyboardInput.addEventListener("beforeinput", event => {
+    if (event.inputType === "deleteContentBackward") rfb?.sendKey(0xff08, "Backspace");
+  });
+  keyboardInput.addEventListener("input", () => {
+    if (composing || !keyboardInput.value) return;
+    sendText(keyboardInput.value);
+    keyboardInput.value = "";
+  });
+  keyboardInput.addEventListener("keydown", event => {
+    const special = { Enter: [0xff0d, "Enter"], Tab: [0xff09, "Tab"], Escape: [0xff1b, "Escape"] }[event.key];
+    if (!special) return;
+    event.preventDefault();
+    rfb?.sendKey(special[0], special[1]);
+  });
 
   connect();
 </script>
