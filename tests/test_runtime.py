@@ -36,7 +36,7 @@ class ScreenRuntimeTests(unittest.TestCase):
 
     def test_nginx_locations_serve_clean_viewer_and_scoped_websocket(self):
         from agent_screen.runtime import render_nginx_locations
-        text = render_nginx_locations([1, 2])
+        text = render_nginx_locations([1, 2, 3, 4])
         self.assertIn("location = /screen/1/", text)
         self.assertIn("root /var/www/agent-screen;", text)
         self.assertIn("try_files /viewer.html =404;", text)
@@ -47,6 +47,10 @@ class ScreenRuntimeTests(unittest.TestCase):
         self.assertIn("proxy_pass http://127.0.0.1:6081/;", text)
         self.assertIn("location = /screen/2/websockify", text)
         self.assertIn("proxy_pass http://127.0.0.1:6082/;", text)
+        self.assertIn("location = /screen/3/websockify", text)
+        self.assertIn("proxy_pass http://127.0.0.1:6083/;", text)
+        self.assertIn("location = /screen/4/websockify", text)
+        self.assertIn("proxy_pass http://127.0.0.1:6084/;", text)
         self.assertNotIn("5900", text)
         self.assertNotIn("9222", text)
 
@@ -171,6 +175,39 @@ class ScreenRuntimeTests(unittest.TestCase):
         self.assertIn('cua-driver.sock', launcher)
         self.assertNotIn("0.0.0.0", launcher + service)
 
+    def test_screen_three_and_four_cua_use_isolated_template_sockets(self):
+        service = (ROOT / "systemd/agent-screen-cua@.service").read_text()
+        launcher = (ROOT / "bin/start_cua_screen.sh").read_text()
+
+        self.assertIn("After=agent-screen@%i.service", service)
+        self.assertIn("Requires=agent-screen@%i.service", service)
+        self.assertIn("ExecStart=/usr/local/libexec/start-cua-screen %i", service)
+        self.assertIn("1|2|3|4", launcher)
+        self.assertIn("cua-driver-screen3.sock", launcher)
+        self.assertIn("cua-driver-screen4.sock", launcher)
+        self.assertNotIn("0.0.0.0", launcher + service)
+
+    def test_sanitized_remote_cua_bridge_supports_four_screens(self):
+        local = (ROOT / "integrations/hermes/cua-driver-remote").read_text()
+        endpoint = (ROOT / "integrations/hermes/cua-driver-remote-endpoint").read_text()
+        screen3 = (ROOT / "integrations/hermes/cua-driver-screen3").read_text()
+        screen4 = (ROOT / "integrations/hermes/cua-driver-screen4").read_text()
+
+        self.assertIn("1|2|3|4", local)
+        self.assertIn("AGENT_SCREEN_CUA_SOCKET_3", endpoint)
+        self.assertIn("AGENT_SCREEN_CUA_SOCKET_4", endpoint)
+        self.assertIn("cua-driver-screen3.sock", endpoint)
+        self.assertIn("cua-driver-screen4.sock", endpoint)
+        self.assertIn("AGENT_SCREEN_CUA_SCREEN=3", screen3)
+        self.assertIn("AGENT_SCREEN_CUA_SCREEN=4", screen4)
+
+    def test_static_nginx_examples_route_all_four_screens(self):
+        for relative in ("nginx/agent-screen.conf", "nginx/agent-screen-https.conf"):
+            config = (ROOT / relative).read_text()
+            for screen_id, web_port in ((1, 6081), (2, 6082), (3, 6083), (4, 6084)):
+                self.assertIn(f"/screen/{screen_id}/", config)
+                self.assertIn(f"127.0.0.1:{web_port}", config)
+
     def test_sanitized_hermes_bridge_has_configurable_public_defaults(self):
         local = (ROOT / "integrations/hermes/cua-driver-remote").read_text()
         endpoint = (ROOT / "integrations/hermes/cua-driver-remote-endpoint").read_text()
@@ -205,14 +242,20 @@ class ScreenRuntimeTests(unittest.TestCase):
         self.assertIn('id="screen-switcher"', viewer)
         self.assertIn('href="/screen/1/"', viewer)
         self.assertIn('href="/screen/2/"', viewer)
+        self.assertIn('href="/screen/3/"', viewer)
+        self.assertIn('href="/screen/4/"', viewer)
         self.assertIn('data-screen="1"', viewer)
         self.assertIn('data-screen="2"', viewer)
+        self.assertIn('data-screen="3"', viewer)
+        self.assertIn('data-screen="4"', viewer)
         self.assertIn('setAttribute("aria-current", "page")', viewer)
         self.assertIn('env(safe-area-inset-top)', viewer)
         self.assertIn('white-space:nowrap', viewer)
         self.assertIn('id="agent-status"', viewer)
         self.assertIn('data-agent="Iris"', viewer)
         self.assertIn('data-agent="Tara"', viewer)
+        self.assertIn('data-agent="Atlas"', viewer)
+        self.assertIn('data-agent="Mira"', viewer)
         self.assertIn('/status/screen-${screenNumber}.json', viewer)
         self.assertIn('cache: "no-store"', viewer)
         self.assertIn('payload.screen !== Number(screenNumber)', viewer)
@@ -224,6 +267,9 @@ class ScreenRuntimeTests(unittest.TestCase):
         self.assertIn("setTimeout(connect, 2000)", viewer)
         self.assertIn('href="/screen/1/"', landing)
         self.assertIn('href="/screen/2/"', landing)
+        self.assertIn('href="/screen/3/"', landing)
+        self.assertIn('href="/screen/4/"', landing)
+        self.assertIn("4 screens available", landing)
         combined = viewer + landing
         self.assertNotIn("vnc.html", combined)
         self.assertNotIn("vnc_lite.html", combined)
@@ -236,6 +282,11 @@ class ScreenRuntimeTests(unittest.TestCase):
         self.assertIn('data-agent-role="Chief of Staff"', viewer)
         self.assertIn('data-agent-name="Tara"', viewer)
         self.assertIn('data-agent-role="Recruitment Agent"', viewer)
+        self.assertIn('data-agent-name="Atlas"', viewer)
+        self.assertIn('data-agent-role="GBAsset &amp; EasyDCIM Agent"', viewer)
+        self.assertIn('data-agent-name="Mira"', viewer)
+        self.assertIn('data-agent-role="Product Design &amp; UX Agent"', viewer)
+        self.assertIn('@media (max-width:480px){#agent-command-header{left:8px;right:8px;width:auto;transform:none}', viewer)
         self.assertIn('id="agent-status-role"', viewer)
         self.assertIn('id="agent-status-activity"', viewer)
         self.assertIn('id="screen-connection-state"', viewer)

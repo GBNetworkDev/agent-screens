@@ -1,0 +1,19 @@
+[Unit]
+Description=Computer Use driver for Agent Screen %i
+After=agent-screen@%i.service
+Requires=agent-screen@%i.service
+StartLimitIntervalSec=120
+StartLimitBurst=10
+
+[Service]
+Type=simple
+User=agent
+Group=agent
+ExecStart=/usr/local/libexec/start-cua-screen %i
+Restart=always
+RestartSec=3
+TimeoutStopSec=10
+KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target

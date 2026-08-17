@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+export AGENT_SCREEN_CUA_SCREEN=4
+export AGENT_SCREEN_LOCAL_WRAPPER="${BASH_SOURCE[0]}"
+exec "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/cua-driver-remote" "$@"

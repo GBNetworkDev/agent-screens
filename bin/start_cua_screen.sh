@@ -3,8 +3,8 @@ set -euo pipefail
 
 screen_id="${1:-1}"
 case "$screen_id" in
-  1|2) ;;
-  *) echo "screen id must be 1 or 2" >&2; exit 2 ;;
+  1|2|3|4) ;;
+  *) echo "screen id must be between 1 and 4" >&2; exit 2 ;;
 esac
 
 export HOME=/home/agent
@@ -35,11 +35,12 @@ gsettings set org.gnome.desktop.interface toolkit-accessibility true
 dbus-send --session --print-reply --dest=org.a11y.Bus \
   /org/a11y/bus org.a11y.Bus.GetAddress >/dev/null
 
-if [[ "$screen_id" == "1" ]]; then
-  socket=/home/agent/.cache/cua-driver/cua-driver.sock
-else
-  socket=/home/agent/.cache/cua-driver/cua-driver-screen2.sock
-fi
+case "$screen_id" in
+  1) socket=/home/agent/.cache/cua-driver/cua-driver.sock ;;
+  2) socket=/home/agent/.cache/cua-driver/cua-driver-screen2.sock ;;
+  3) socket=/home/agent/.cache/cua-driver/cua-driver-screen3.sock ;;
+  4) socket=/home/agent/.cache/cua-driver/cua-driver-screen4.sock ;;
+esac
 
 exec /home/agent/.local/bin/cua-driver serve \
   --socket "$socket" \

@@ -10,7 +10,7 @@
     html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#1e2330}
     body{display:flex}
     canvas{outline:none}
-    #agent-command-header{position:fixed;z-index:30;top:max(8px,env(safe-area-inset-top));left:50%;width:min(430px,calc(100vw - 20px));transform:translateX(-50%);overflow:hidden;border:1px solid #ffffff2c;border-radius:17px;background:#0f172aeb;color:#f8fafc;box-shadow:0 12px 34px #0009;backdrop-filter:blur(15px);font-family:system-ui,-apple-system,sans-serif;transition:width .2s,border-radius .2s,opacity .15s}
+    #agent-command-header{position:fixed;z-index:30;top:max(8px,env(safe-area-inset-top));left:50%;width:min(520px,calc(100vw - 20px));transform:translateX(-50%);overflow:hidden;border:1px solid #ffffff2c;border-radius:17px;background:#0f172aeb;color:#f8fafc;box-shadow:0 12px 34px #0009;backdrop-filter:blur(15px);font-family:system-ui,-apple-system,sans-serif;transition:width .2s,border-radius .2s,opacity .15s}
     #screen-switcher{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-bottom:1px solid #ffffff1f}
     #screen-switcher a{display:grid;grid-template-columns:9px 1fr;grid-template-rows:auto auto;column-gap:9px;align-items:center;min-height:50px;padding:7px 12px;border-radius:12px;color:#94a3b8;text-decoration:none;white-space:nowrap;touch-action:manipulation;transition:background .15s,color .15s,box-shadow .15s}
     .screen-link-dot{grid-row:1/3;width:8px;height:8px;border-radius:50%;background:#64748b;box-shadow:0 0 0 3px #64748b22}
@@ -19,8 +19,12 @@
     #screen-switcher a:hover,#screen-switcher a:focus-visible{background:#ffffff10;color:#fff;outline:none}
     #screen-switcher a[aria-current="page"]{background:linear-gradient(135deg,#334155,#1e3a8a);color:#fff;box-shadow:inset 0 0 0 1px #60a5fa45,0 5px 16px #0004}
     #screen-switcher a[data-screen="1"][aria-current="page"]{background:linear-gradient(135deg,#4c1d95,#312e81)}
+    #screen-switcher a[data-screen="3"][aria-current="page"]{background:linear-gradient(135deg,#14532d,#164e63)}
+    #screen-switcher a[data-screen="4"][aria-current="page"]{background:linear-gradient(135deg,#831843,#4c1d95)}
     #screen-switcher a[aria-current="page"] .screen-link-dot{background:#a5f3fc;box-shadow:0 0 0 3px #67e8f933}
     #screen-switcher a[data-screen="1"][aria-current="page"] .screen-link-dot{background:#c4b5fd;box-shadow:0 0 0 3px #c4b5fd33}
+    #screen-switcher a[data-screen="3"][aria-current="page"] .screen-link-dot{background:#86efac;box-shadow:0 0 0 3px #86efac33}
+    #screen-switcher a[data-screen="4"][aria-current="page"] .screen-link-dot{background:#f9a8d4;box-shadow:0 0 0 3px #f9a8d433}
     #agent-status{position:relative;display:grid;grid-template-columns:12px minmax(0,1fr) auto;grid-template-areas:"dot identity state" "dot task task" "dot meta meta";column-gap:10px;row-gap:4px;padding:12px 14px 13px}
     #agent-status-dot{grid-area:dot;align-self:start;width:10px;height:10px;margin-top:4px;border-radius:50%;background:#64748b;box-shadow:0 0 0 4px #64748b24}
     #agent-status-identity{grid-area:identity;min-width:0}
@@ -57,7 +61,7 @@
     #mobile-keyboard-input{width:min(56vw,280px);height:44px;border:1px solid #64748b;border-radius:10px;padding:0 12px;background:#f8fafc;color:#0f172a;font:500 16px/1 system-ui,-apple-system,sans-serif;outline:none}
     #mobile-keyboard-input:focus{border-color:#60a5fa;box-shadow:0 0 0 3px #3b82f633}
     @media (pointer:fine) and (min-width:900px){#agent-command-header,#mobile-keyboard{opacity:.82}#agent-command-header:hover,#agent-command-header:focus-within,#mobile-keyboard:hover,#mobile-keyboard:focus-within{opacity:1}}
-    @media (max-width:480px){#agent-command-header{width:calc(100vw - 16px)}#screen-switcher a{min-height:48px;padding:6px 10px}#agent-status{padding:11px 12px 13px}#agent-status-role{display:block;margin:3px 0 0}}
+    @media (max-width:480px){#agent-command-header{left:8px;right:8px;width:auto;transform:none}#screen-switcher a{min-height:48px;padding:6px 10px}#agent-status{padding:11px 12px 13px}#agent-status-role{display:block;margin:3px 0 0}}
     @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
   </style>
 </head>
@@ -73,6 +77,16 @@
         <span class="screen-link-dot" aria-hidden="true"></span>
         <span class="screen-link-name">TARA · S2</span>
         <span class="screen-link-role">Recruitment Agent</span>
+      </a>
+      <a href="/screen/3/" data-screen="3" data-agent="Atlas" data-agent-name="Atlas" data-agent-role="GBAsset &amp; EasyDCIM Agent">
+        <span class="screen-link-dot" aria-hidden="true"></span>
+        <span class="screen-link-name">ATLAS · S3</span>
+        <span class="screen-link-role">GBAsset &amp; EasyDCIM Agent</span>
+      </a>
+      <a href="/screen/4/" data-screen="4" data-agent="Mira" data-agent-name="Mira" data-agent-role="Product Design &amp; UX Agent">
+        <span class="screen-link-dot" aria-hidden="true"></span>
+        <span class="screen-link-name">MIRA · S4</span>
+        <span class="screen-link-role">Product Design &amp; UX Agent</span>
       </a>
     </nav>
 
@@ -100,7 +114,7 @@
 <script type="module">
   import RFB from "./core/rfb.js";
 
-  const match = location.pathname.match(/^\/screen\/([12])\/?$/);
+  const match = location.pathname.match(/^\/screen\/([1-4])\/?$/);
   if (!match) throw new Error("Invalid screen path");
 
   const screenNumber = match[1];

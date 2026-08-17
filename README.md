@@ -23,6 +23,8 @@ Each screen gets its own X11 display, desktop session, Chrome profile, VNC/WebSo
 |---|---:|---:|---:|---:|---|
 | 1 | `:1` | `5900` | `6081` | `9222` | `/home/agent/chrome-profile-1` |
 | 2 | `:2` | `5902` | `6082` | `9223` | `/home/agent/chrome-profile-2` |
+| 3 | `:3` | `5903` | `6083` | `9224` | `/home/agent/chrome-profile-3` |
+| 4 | `:4` | `5904` | `6084` | `9225` | `/home/agent/chrome-profile-4` |
 
 All backend ports are intended to listen on `127.0.0.1`. Nginx is the only public-facing entry point.
 
@@ -67,18 +69,19 @@ A Debian-based Linux host with:
 ```bash
 sudo install -o root -g root -m 0755 bin/start_cua_screen.sh /usr/local/libexec/start-cua-screen
 sudo systemctl daemon-reload
-sudo systemctl enable --now agent-screen@1 agent-screen@2
-sudo systemctl enable --now agent-screen-chrome@1 agent-screen-chrome@2
+sudo systemctl enable --now agent-screen@1 agent-screen@2 agent-screen@3 agent-screen@4
+sudo systemctl enable --now agent-screen-chrome@1 agent-screen-chrome@2 agent-screen-chrome@3 agent-screen-chrome@4
 sudo systemctl enable --now agent-screen-cua-screen2.service  # optional
+sudo systemctl enable --now agent-screen-cua@3.service agent-screen-cua@4.service  # optional
 ```
 
-The Screen 2 CUA unit uses `/home/agent/.cache/cua-driver/cua-driver-screen2.sock`, keeping it isolated from any existing Screen 1 CUA socket.
+Each CUA unit uses an isolated socket. Screen 1 retains `cua-driver.sock`; Screens 2–4 use `cua-driver-screen2.sock` through `cua-driver-screen4.sock`.
 
-To connect Hermes to both sockets through native MCP tools without exposing backend listeners, follow the sanitized guide in [`integrations/hermes/README.md`](integrations/hermes/README.md). All real SSH hostnames, ports, identity paths, and credentials stay in the operator environment and must not be committed.
+To connect Hermes to all four sockets through native MCP tools without exposing backend listeners, follow the sanitized guide in [`integrations/hermes/README.md`](integrations/hermes/README.md). All real SSH hostnames, ports, identity paths, and credentials stay in the operator environment and must not be committed.
 
 ### Agent command header and live status
 
-The clean viewer presents each screen as a named agent: `Iris · S1` for the Chief of Staff workspace and `Tara · S2` for recruitment. Both screens load a bounded status document, show live/reconnecting screen health, and collapse to a compact status pill after five seconds on mobile. The header is read-only; it does not expose restart, pause, or agent-action controls.
+The clean viewer presents four named agents: `Iris · S1`, `Tara · S2`, `Atlas · S3`, and `Mira · S4`. Every screen loads a bounded status document, shows live/reconnecting screen health, and collapses to a compact status pill after five seconds on mobile. The header is read-only; it does not expose restart, pause, or agent-action controls.
 
 Publish each screen status atomically:
 
@@ -94,9 +97,21 @@ sudo bin/update_screen_status.py \
   --agent Tara \
   --state idle \
   --task "Ready for recruitment checks"
+
+sudo bin/update_screen_status.py \
+  --screen 3 \
+  --agent Atlas \
+  --state idle \
+  --task "Ready for GBAsset work"
+
+sudo bin/update_screen_status.py \
+  --screen 4 \
+  --agent Mira \
+  --state idle \
+  --task "Ready for product design work"
 ```
 
-The default outputs are `/var/www/agent-screen/status/screen-1.json` and `screen-2.json`. Override the directory with `--output-dir` or `AGENT_SCREEN_STATUS_DIR`. Allowed states are `idle`, `working`, `waiting_approval`, `error`, and `offline`; the viewer renders `idle` as **Ready**. Task text is limited to 120 characters. Keep all status text free of secrets and personal data.
+The default outputs are `/var/www/agent-screen/status/screen-<id>.json`. Override the directory with `--output-dir` or `AGENT_SCREEN_STATUS_DIR`. Allowed states are `idle`, `working`, `waiting_approval`, `error`, and `offline`; the viewer renders `idle` as **Ready**. Task text is limited to 120 characters. Keep all status text free of secrets and personal data.
 
 Hermes can publish these states automatically through the optional sanitized
 [`agent-screen-status` lifecycle plugin](integrations/hermes/agent-screen-status/README.md).

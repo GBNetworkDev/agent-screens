@@ -2,11 +2,11 @@
 set -Eeuo pipefail
 
 : "${AGENT_SCREEN_SSH_HOST:?Set AGENT_SCREEN_SSH_HOST (for example screens.example.com)}"
-: "${AGENT_SCREEN_CUA_SCREEN:?Set AGENT_SCREEN_CUA_SCREEN to 1 or 2}"
+: "${AGENT_SCREEN_CUA_SCREEN:?Set AGENT_SCREEN_CUA_SCREEN between 1 and 4}"
 
 case "$AGENT_SCREEN_CUA_SCREEN" in
-  1|2) ;;
-  *) printf 'AGENT_SCREEN_CUA_SCREEN must be 1 or 2\n' >&2; exit 2 ;;
+  1|2|3|4) ;;
+  *) printf 'AGENT_SCREEN_CUA_SCREEN must be between 1 and 4\n' >&2; exit 2 ;;
 esac
 
 ssh_bin="${AGENT_SCREEN_SSH_BIN:-/usr/bin/ssh}"
