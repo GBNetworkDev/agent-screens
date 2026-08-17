@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -169,6 +170,31 @@ class ScreenRuntimeTests(unittest.TestCase):
         self.assertIn('cua-driver-screen2.sock', launcher)
         self.assertIn('cua-driver.sock', launcher)
         self.assertNotIn("0.0.0.0", launcher + service)
+
+    def test_sanitized_hermes_bridge_has_configurable_public_defaults(self):
+        local = (ROOT / "integrations/hermes/cua-driver-remote").read_text()
+        endpoint = (ROOT / "integrations/hermes/cua-driver-remote-endpoint").read_text()
+        rewrite = (ROOT / "integrations/hermes/rewrite_cua_manifest.py").read_text()
+        docs = (ROOT / "integrations/hermes/README.md").read_text()
+        combined = local + endpoint + rewrite + docs
+
+        self.assertIn("AGENT_SCREEN_SSH_HOST", local)
+        self.assertIn("AGENT_SCREEN_SSH_PORT", local)
+        self.assertIn("AGENT_SCREEN_SSH_IDENTITY", local)
+        self.assertIn("AGENT_SCREEN_CUA_SCREEN", local)
+        self.assertIn("AGENT_SCREEN_REMOTE_ENDPOINT", local)
+        self.assertIn("AGENT_SCREEN_CUA_SOCKET_1", endpoint)
+        self.assertIn("AGENT_SCREEN_CUA_SOCKET_2", endpoint)
+        self.assertIn("binary_path", rewrite)
+        self.assertIn("screens.example.com", docs)
+        self.assertIn("cua_screen1", docs)
+        self.assertIn("cua_screen2", docs)
+        ipv4_addresses = set(re.findall(r"\b(?:\d{1,3}\.){3}\d{1,3}\b", combined))
+        documentation_prefixes = ("192.0.2.", "198.51.100.", "203.0.113.")
+        self.assertTrue(
+            all(address.startswith(documentation_prefixes) for address in ipv4_addresses),
+            f"non-documentation IP address found: {sorted(ipv4_addresses)}",
+        )
 
     def test_clean_viewer_and_landing_have_no_legacy_novnc_pages(self):
         viewer = (ROOT / "web/viewer.html").read_text()

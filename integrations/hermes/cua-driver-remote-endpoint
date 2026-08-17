@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+screen_id="${1:-}"
+shift || true
+case "$screen_id" in
+  1) socket="${AGENT_SCREEN_CUA_SOCKET_1:-/home/agent/.cache/cua-driver/cua-driver.sock}" ;;
+  2) socket="${AGENT_SCREEN_CUA_SOCKET_2:-/home/agent/.cache/cua-driver/cua-driver-screen2.sock}" ;;
+  *) printf 'screen id must be 1 or 2\n' >&2; exit 2 ;;
+esac
+
+agent_user="${AGENT_SCREEN_CUA_USER:-agent}"
+agent_home="${AGENT_SCREEN_CUA_HOME:-/home/agent}"
+driver="${AGENT_SCREEN_CUA_DRIVER:-/home/agent/.local/bin/cua-driver}"
+runuser_bin="${AGENT_SCREEN_RUNUSER_BIN:-/usr/sbin/runuser}"
+driver_path="${AGENT_SCREEN_CUA_PATH:-/home/agent/.local/bin:/usr/local/bin:/usr/bin:/bin}"
+
+case "${1:-}" in
+  --version|version|manifest|skills)
+    exec "$runuser_bin" -u "$agent_user" -- env \
+      HOME="$agent_home" PATH="$driver_path" \
+      "$driver" "$@"
+    ;;
+  *)
+    exec "$runuser_bin" -u "$agent_user" -- env \
+      HOME="$agent_home" PATH="$driver_path" \
+      "$driver" "$@" --socket "$socket"
+    ;;
+esac

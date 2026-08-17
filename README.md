@@ -35,6 +35,7 @@ All backend ports are intended to listen on `127.0.0.1`. Nginx is the only publi
 - `web/` — responsive launcher and viewer
 - `assets/` — wallpapers and desktop assets
 - `tests/` — unit and contract tests
+- `integrations/hermes/` — sanitized SSH bridge for native Hermes Computer Use on both screens
 
 ## Requirements
 
@@ -71,6 +72,8 @@ sudo systemctl enable --now agent-screen-cua-screen2.service  # optional
 ```
 
 The Screen 2 CUA unit uses `/home/agent/.cache/cua-driver/cua-driver-screen2.sock`, keeping it isolated from any existing Screen 1 CUA socket.
+
+To connect Hermes to both sockets through native MCP tools without exposing backend listeners, follow the sanitized guide in [`integrations/hermes/README.md`](integrations/hermes/README.md). All real SSH hostnames, ports, identity paths, and credentials stay in the operator environment and must not be committed.
 
 Set the hostname used by the operator CLI through the service environment or shell:
 
