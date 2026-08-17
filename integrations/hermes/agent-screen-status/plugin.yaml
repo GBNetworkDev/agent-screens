@@ -1,0 +1,3 @@
+name: agent-screen-status
+version: "1.0.0"
+description: Publish top-level Hermes lifecycle state to Agent Screens

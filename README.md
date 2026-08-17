@@ -36,7 +36,7 @@ All backend ports are intended to listen on `127.0.0.1`. Nginx is the only publi
 - `web/` — responsive launcher and viewer
 - `assets/` — wallpapers and desktop assets
 - `tests/` — unit and contract tests
-- `integrations/hermes/` — sanitized SSH bridge for native Hermes Computer Use on both screens
+- `integrations/hermes/` — sanitized Hermes bridges and lifecycle status plugin
 
 ## Requirements
 
@@ -97,6 +97,12 @@ sudo bin/update_screen_status.py \
 ```
 
 The default outputs are `/var/www/agent-screen/status/screen-1.json` and `screen-2.json`. Override the directory with `--output-dir` or `AGENT_SCREEN_STATUS_DIR`. Allowed states are `idle`, `working`, `waiting_approval`, `error`, and `offline`; the viewer renders `idle` as **Ready**. Task text is limited to 120 characters. Keep all status text free of secrets and personal data.
+
+Hermes can publish these states automatically through the optional sanitized
+[`agent-screen-status` lifecycle plugin](integrations/hermes/agent-screen-status/README.md).
+The plugin tracks top-level turns and approvals, guards overlapping work, and
+ignores background review/subagent forks so internal maintenance cannot leave
+the owner-facing header stuck on **Working**.
 
 Set the hostname used by the operator CLI through the service environment or shell:
 
