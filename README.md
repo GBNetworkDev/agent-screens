@@ -10,6 +10,7 @@ Each screen gets its own X11 display, desktop session, Chrome profile, VNC/WebSo
 - Separate Chrome profiles and CDP endpoints per screen
 - Minimal XFCE stack with `xfwm4`, Picom, Plank, Thunar, and XFCE Terminal
 - Responsive web launcher and clean noVNC viewer
+- Optional per-screen agent status cards backed by atomic, bounded JSON updates
 - Loopback-only VNC, Websockify, and CDP listeners
 - Nginx HTTPS routing with a VPN allowlist
 - Kuala Lumpur day/night wallpaper switching
@@ -74,6 +75,20 @@ sudo systemctl enable --now agent-screen-cua-screen2.service  # optional
 The Screen 2 CUA unit uses `/home/agent/.cache/cua-driver/cua-driver-screen2.sock`, keeping it isolated from any existing Screen 1 CUA socket.
 
 To connect Hermes to both sockets through native MCP tools without exposing backend listeners, follow the sanitized guide in [`integrations/hermes/README.md`](integrations/hermes/README.md). All real SSH hostnames, ports, identity paths, and credentials stay in the operator environment and must not be committed.
+
+### Optional agent status
+
+The clean viewer can show a compact, live status card for a dedicated screen worker. Publish a bounded status document atomically:
+
+```bash
+sudo bin/update_screen_status.py \
+  --screen 2 \
+  --agent Tara \
+  --state idle \
+  --task "Ready for recruitment checks"
+```
+
+The default output is `/var/www/agent-screen/status/screen-2.json`. Override it with `--output-dir` or `AGENT_SCREEN_STATUS_DIR`. Allowed states are `idle`, `working`, `waiting_approval`, `error`, and `offline`; task text is limited to 120 characters. Keep status text free of secrets and personal data.
 
 Set the hostname used by the operator CLI through the service environment or shell:
 

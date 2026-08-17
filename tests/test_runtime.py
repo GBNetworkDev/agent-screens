@@ -210,6 +210,11 @@ class ScreenRuntimeTests(unittest.TestCase):
         self.assertIn('setAttribute("aria-current", "page")', viewer)
         self.assertIn('env(safe-area-inset-top)', viewer)
         self.assertIn('white-space:nowrap', viewer)
+        self.assertIn('id="agent-status"', viewer)
+        self.assertIn('data-agent="Tara"', viewer)
+        self.assertIn('/status/screen-${screenNumber}.json', viewer)
+        self.assertIn('cache: "no-store"', viewer)
+        self.assertIn('screenNumber === "2"', viewer)
         self.assertIn('inputmode="text"', viewer)
         self.assertIn("rfb.sendKey", viewer)
         self.assertIn("scaleViewport = true", viewer)
@@ -221,6 +226,57 @@ class ScreenRuntimeTests(unittest.TestCase):
         combined = viewer + landing
         self.assertNotIn("vnc.html", combined)
         self.assertNotIn("vnc_lite.html", combined)
+
+    def test_status_writer_emits_atomic_bounded_json(self):
+        script = ROOT / "bin/update_screen_status.py"
+        self.assertTrue(script.exists())
+        with tempfile.TemporaryDirectory() as directory:
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(script),
+                    "--output-dir",
+                    directory,
+                    "--screen",
+                    "2",
+                    "--agent",
+                    "Tara",
+                    "--state",
+                    "working",
+                    "--task",
+                    "Checking Indeed applicants",
+                ],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            status_path = Path(directory) / "screen-2.json"
+            payload = json.loads(status_path.read_text())
+            self.assertEqual(payload["schema"], 1)
+            self.assertEqual(payload["screen"], 2)
+            self.assertEqual(payload["agent"], "Tara")
+            self.assertEqual(payload["state"], "working")
+            self.assertEqual(payload["task"], "Checking Indeed applicants")
+            self.assertRegex(payload["updated_at"], r"^\d{4}-\d{2}-\d{2}T")
+            self.assertEqual(status_path.stat().st_mode & 0o777, 0o644)
+            self.assertIn(str(status_path), result.stdout)
+            self.assertFalse(list(Path(directory).glob("*.tmp")))
+
+    def test_status_writer_rejects_invalid_state_and_long_task(self):
+        script = ROOT / "bin/update_screen_status.py"
+        with tempfile.TemporaryDirectory() as directory:
+            invalid = subprocess.run(
+                [sys.executable, str(script), "--output-dir", directory, "--screen", "2", "--agent", "Tara", "--state", "busy", "--task", "Test"],
+                capture_output=True,
+                text=True,
+            )
+            too_long = subprocess.run(
+                [sys.executable, str(script), "--output-dir", directory, "--screen", "2", "--agent", "Tara", "--state", "working", "--task", "x" * 121],
+                capture_output=True,
+                text=True,
+            )
+            self.assertNotEqual(invalid.returncode, 0)
+            self.assertNotEqual(too_long.returncode, 0)
 
 
 if __name__ == "__main__":

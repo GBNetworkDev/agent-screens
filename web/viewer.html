@@ -16,6 +16,16 @@
     #screen-switcher a:hover,#screen-switcher a:focus-visible{background:#ffffff12;color:#fff;outline:none}
     #screen-switcher a[aria-current="page"]{background:linear-gradient(135deg,#2563eb,#3b82f6);color:#fff;box-shadow:0 6px 18px #2563eb55}
     #screen-switcher a[aria-current="page"]::before{background:#bfdbfe;box-shadow:0 0 0 3px #bfdbfe2e}
+    #agent-status{position:fixed;z-index:29;top:max(12px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));display:grid;grid-template-columns:10px auto;column-gap:9px;row-gap:3px;align-items:center;max-width:min(320px,calc(100vw - 24px));padding:10px 13px;border:1px solid #ffffff2c;border-radius:14px;background:#0f172ae8;color:#f8fafc;box-shadow:0 10px 28px #0008;backdrop-filter:blur(12px);font-family:system-ui,-apple-system,sans-serif}
+    #agent-status[hidden]{display:none}
+    #agent-status-dot{grid-row:1/3;width:9px;height:9px;border-radius:50%;background:#64748b;box-shadow:0 0 0 4px #64748b24}
+    #agent-status-name{font-size:13px;font-weight:750;line-height:1.15;white-space:nowrap}
+    #agent-status-state{margin-left:5px;color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+    #agent-status-task{overflow:hidden;color:#cbd5e1;font-size:12px;font-weight:550;line-height:1.25;text-overflow:ellipsis;white-space:nowrap}
+    #agent-status[data-state="working"] #agent-status-dot{background:#22c55e;box-shadow:0 0 0 4px #22c55e24}
+    #agent-status[data-state="idle"] #agent-status-dot{background:#3b82f6;box-shadow:0 0 0 4px #3b82f624}
+    #agent-status[data-state="waiting_approval"] #agent-status-dot{background:#f59e0b;box-shadow:0 0 0 4px #f59e0b24}
+    #agent-status[data-state="error"] #agent-status-dot{background:#ef4444;box-shadow:0 0 0 4px #ef444424}
     #mobile-keyboard{position:fixed;z-index:20;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));display:flex;align-items:center;gap:8px;font:600 14px/1 system-ui,-apple-system,sans-serif}
     #mobile-keyboard button{min-height:44px;border:1px solid #ffffff2c;border-radius:12px;padding:0 14px;background:#111827e8;color:#f8fafc;box-shadow:0 8px 24px #0008;touch-action:manipulation}
     #mobile-keyboard-button{font-size:18px;min-width:48px;padding:0 12px}
@@ -23,7 +33,8 @@
     #mobile-keyboard-panel[hidden]{display:none}
     #mobile-keyboard-input{width:min(56vw,280px);height:44px;border:1px solid #64748b;border-radius:10px;padding:0 12px;background:#f8fafc;color:#0f172a;font:500 16px/1 system-ui,-apple-system,sans-serif;outline:none}
     #mobile-keyboard-input:focus{border-color:#60a5fa;box-shadow:0 0 0 3px #3b82f633}
-    @media (pointer:fine) and (min-width:900px){#screen-switcher,#mobile-keyboard{opacity:.38;transition:opacity .15s}#screen-switcher:hover,#screen-switcher:focus-within,#mobile-keyboard:hover,#mobile-keyboard:focus-within{opacity:1}}
+    @media (pointer:fine) and (min-width:900px){#screen-switcher,#agent-status,#mobile-keyboard{opacity:.78;transition:opacity .15s}#screen-switcher:hover,#screen-switcher:focus-within,#agent-status:hover,#mobile-keyboard:hover,#mobile-keyboard:focus-within{opacity:1}}
+    @media (max-width:720px){#agent-status{top:calc(max(8px,env(safe-area-inset-top)) + 58px);right:50%;width:min(360px,calc(100vw - 20px));transform:translateX(50%)}}
     @media (max-width:480px){#screen-switcher{top:max(8px,env(safe-area-inset-top));padding:3px;border-radius:14px}#screen-switcher a{min-width:84px;min-height:44px;padding:0 11px;font-size:12px}}
   </style>
 </head>
@@ -32,6 +43,12 @@
     <a href="/screen/1/" data-screen="1">Screen 1</a>
     <a href="/screen/2/" data-screen="2">Screen 2</a>
   </nav>
+
+  <aside id="agent-status" data-agent="Tara" data-state="offline" aria-live="polite" hidden>
+    <span id="agent-status-dot" aria-hidden="true"></span>
+    <div id="agent-status-name">Tara <span id="agent-status-state">Offline</span></div>
+    <div id="agent-status-task">Recruitment Agent unavailable</div>
+  </aside>
 
   <div id="mobile-keyboard" aria-label="Remote keyboard controls">
     <div id="mobile-keyboard-panel" hidden>
@@ -56,6 +73,16 @@
   const keyboardPanel = document.getElementById("mobile-keyboard-panel");
   const keyboardInput = document.getElementById("mobile-keyboard-input");
   const keyboardDone = document.getElementById("mobile-keyboard-done");
+  const agentStatus = document.getElementById("agent-status");
+  const agentStatusState = document.getElementById("agent-status-state");
+  const agentStatusTask = document.getElementById("agent-status-task");
+  const statusLabels = {
+    idle: "Idle",
+    working: "Working",
+    waiting_approval: "Waiting for Boss",
+    error: "Attention",
+    offline: "Offline",
+  };
   let rfb = null;
   let reconnectTimer = null;
   let composing = false;
@@ -70,6 +97,26 @@
       rfb = null;
       reconnectTimer = setTimeout(connect, 2000);
     }, { once: true });
+  }
+
+  function setAgentStatus(state, task, updatedAt = "") {
+    const safeState = Object.hasOwn(statusLabels, state) ? state : "offline";
+    agentStatus.dataset.state = safeState;
+    agentStatusState.textContent = statusLabels[safeState];
+    agentStatusTask.textContent = task || "Recruitment Agent unavailable";
+    agentStatus.title = updatedAt ? `Updated ${updatedAt}` : "Status unavailable";
+  }
+
+  async function refreshAgentStatus() {
+    try {
+      const response = await fetch(`/status/screen-${screenNumber}.json?t=${Date.now()}`, { cache: "no-store" });
+      if (!response.ok) throw new Error(`status ${response.status}`);
+      const payload = await response.json();
+      if (payload.schema !== 1 || payload.screen !== 2 || payload.agent !== "Tara") throw new Error("invalid status payload");
+      setAgentStatus(payload.state, payload.task, payload.updated_at);
+    } catch (_error) {
+      setAgentStatus("offline", "Recruitment Agent unavailable");
+    }
   }
 
   function sendText(text) {
@@ -119,6 +166,11 @@
     rfb?.sendKey(special[0], special[1]);
   });
 
+  if (screenNumber === "2") {
+    agentStatus.hidden = false;
+    refreshAgentStatus();
+    setInterval(refreshAgentStatus, 5000);
+  }
   connect();
 </script>
 </body>
