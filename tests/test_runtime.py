@@ -211,10 +211,11 @@ class ScreenRuntimeTests(unittest.TestCase):
         self.assertIn('env(safe-area-inset-top)', viewer)
         self.assertIn('white-space:nowrap', viewer)
         self.assertIn('id="agent-status"', viewer)
+        self.assertIn('data-agent="Iris"', viewer)
         self.assertIn('data-agent="Tara"', viewer)
         self.assertIn('/status/screen-${screenNumber}.json', viewer)
         self.assertIn('cache: "no-store"', viewer)
-        self.assertIn('screenNumber === "2"', viewer)
+        self.assertIn('payload.screen !== Number(screenNumber)', viewer)
         self.assertIn('inputmode="text"', viewer)
         self.assertIn("rfb.sendKey", viewer)
         self.assertIn("scaleViewport = true", viewer)
@@ -226,6 +227,41 @@ class ScreenRuntimeTests(unittest.TestCase):
         combined = viewer + landing
         self.assertNotIn("vnc.html", combined)
         self.assertNotIn("vnc_lite.html", combined)
+
+    def test_viewer_has_unified_agent_command_header(self):
+        viewer = (ROOT / "web/viewer.html").read_text()
+
+        self.assertIn('id="agent-command-header"', viewer)
+        self.assertIn('data-agent-name="Iris"', viewer)
+        self.assertIn('data-agent-role="Chief of Staff"', viewer)
+        self.assertIn('data-agent-name="Tara"', viewer)
+        self.assertIn('data-agent-role="Recruitment Agent"', viewer)
+        self.assertIn('id="agent-status-role"', viewer)
+        self.assertIn('id="agent-status-activity"', viewer)
+        self.assertIn('id="screen-connection-state"', viewer)
+        self.assertIn('id="agent-header-toggle"', viewer)
+        self.assertIn('aria-expanded="true"', viewer)
+        self.assertIn('data-collapsed="false"', viewer)
+        self.assertIn('#agent-header-toggle{position:absolute;right:0;bottom:0;width:44px;height:44px', viewer)
+
+    def test_viewer_loads_status_for_both_agent_screens(self):
+        viewer = (ROOT / "web/viewer.html").read_text()
+
+        self.assertIn('/status/screen-${screenNumber}.json', viewer)
+        self.assertIn('payload.screen !== Number(screenNumber)', viewer)
+        self.assertIn('payload.agent !== activeAgent.name', viewer)
+        self.assertIn('idle: "Ready"', viewer)
+        self.assertIn('setInterval(refreshAgentStatus, 5000)', viewer)
+        self.assertNotIn('screenNumber === "2"', viewer)
+
+    def test_viewer_reports_live_and_reconnecting_screen_connection(self):
+        viewer = (ROOT / "web/viewer.html").read_text()
+
+        self.assertIn('addEventListener("connect"', viewer)
+        self.assertIn('setConnectionState("live")', viewer)
+        self.assertIn('setConnectionState("reconnecting")', viewer)
+        self.assertIn('Screen Live', viewer)
+        self.assertIn('Reconnecting', viewer)
 
     def test_status_writer_emits_atomic_bounded_json(self):
         script = ROOT / "bin/update_screen_status.py"

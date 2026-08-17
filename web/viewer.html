@@ -4,51 +4,90 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
   <meta name="theme-color" content="#1e2330">
-  <title>Screen</title>
+  <title>Agent Screen</title>
   <style>
     *{box-sizing:border-box}
     html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#1e2330}
     body{display:flex}
     canvas{outline:none}
-    #screen-switcher{position:fixed;z-index:30;top:max(10px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:4px;padding:4px;border:1px solid #ffffff2c;border-radius:15px;background:#0f172ad9;box-shadow:0 10px 28px #0008;backdrop-filter:blur(12px);font:700 13px/1 system-ui,-apple-system,sans-serif}
-    #screen-switcher a{display:flex;align-items:center;justify-content:center;gap:7px;min-width:94px;min-height:44px;padding:0 14px;border-radius:11px;color:#cbd5e1;text-decoration:none;white-space:nowrap;touch-action:manipulation;transition:background .15s,color .15s,box-shadow .15s}
-    #screen-switcher a::before{content:"";width:7px;height:7px;border-radius:50%;background:#64748b;box-shadow:0 0 0 3px #64748b22}
-    #screen-switcher a:hover,#screen-switcher a:focus-visible{background:#ffffff12;color:#fff;outline:none}
-    #screen-switcher a[aria-current="page"]{background:linear-gradient(135deg,#2563eb,#3b82f6);color:#fff;box-shadow:0 6px 18px #2563eb55}
-    #screen-switcher a[aria-current="page"]::before{background:#bfdbfe;box-shadow:0 0 0 3px #bfdbfe2e}
-    #agent-status{position:fixed;z-index:29;top:max(12px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));display:grid;grid-template-columns:10px auto;column-gap:9px;row-gap:3px;align-items:center;max-width:min(320px,calc(100vw - 24px));padding:10px 13px;border:1px solid #ffffff2c;border-radius:14px;background:#0f172ae8;color:#f8fafc;box-shadow:0 10px 28px #0008;backdrop-filter:blur(12px);font-family:system-ui,-apple-system,sans-serif}
-    #agent-status[hidden]{display:none}
-    #agent-status-dot{grid-row:1/3;width:9px;height:9px;border-radius:50%;background:#64748b;box-shadow:0 0 0 4px #64748b24}
-    #agent-status-name{font-size:13px;font-weight:750;line-height:1.15;white-space:nowrap}
-    #agent-status-state{margin-left:5px;color:#94a3b8;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
-    #agent-status-task{overflow:hidden;color:#cbd5e1;font-size:12px;font-weight:550;line-height:1.25;text-overflow:ellipsis;white-space:nowrap}
-    #agent-status[data-state="working"] #agent-status-dot{background:#22c55e;box-shadow:0 0 0 4px #22c55e24}
-    #agent-status[data-state="idle"] #agent-status-dot{background:#3b82f6;box-shadow:0 0 0 4px #3b82f624}
-    #agent-status[data-state="waiting_approval"] #agent-status-dot{background:#f59e0b;box-shadow:0 0 0 4px #f59e0b24}
-    #agent-status[data-state="error"] #agent-status-dot{background:#ef4444;box-shadow:0 0 0 4px #ef444424}
+    #agent-command-header{position:fixed;z-index:30;top:max(8px,env(safe-area-inset-top));left:50%;width:min(430px,calc(100vw - 20px));transform:translateX(-50%);overflow:hidden;border:1px solid #ffffff2c;border-radius:17px;background:#0f172aeb;color:#f8fafc;box-shadow:0 12px 34px #0009;backdrop-filter:blur(15px);font-family:system-ui,-apple-system,sans-serif;transition:width .2s,border-radius .2s,opacity .15s}
+    #screen-switcher{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-bottom:1px solid #ffffff1f}
+    #screen-switcher a{display:grid;grid-template-columns:9px 1fr;grid-template-rows:auto auto;column-gap:9px;align-items:center;min-height:50px;padding:7px 12px;border-radius:12px;color:#94a3b8;text-decoration:none;white-space:nowrap;touch-action:manipulation;transition:background .15s,color .15s,box-shadow .15s}
+    .screen-link-dot{grid-row:1/3;width:8px;height:8px;border-radius:50%;background:#64748b;box-shadow:0 0 0 3px #64748b22}
+    .screen-link-name{font-size:13px;font-weight:800;line-height:1.1;letter-spacing:.02em}
+    .screen-link-role{overflow:hidden;font-size:10px;font-weight:650;line-height:1.1;text-overflow:ellipsis}
+    #screen-switcher a:hover,#screen-switcher a:focus-visible{background:#ffffff10;color:#fff;outline:none}
+    #screen-switcher a[aria-current="page"]{background:linear-gradient(135deg,#334155,#1e3a8a);color:#fff;box-shadow:inset 0 0 0 1px #60a5fa45,0 5px 16px #0004}
+    #screen-switcher a[data-screen="1"][aria-current="page"]{background:linear-gradient(135deg,#4c1d95,#312e81)}
+    #screen-switcher a[aria-current="page"] .screen-link-dot{background:#a5f3fc;box-shadow:0 0 0 3px #67e8f933}
+    #screen-switcher a[data-screen="1"][aria-current="page"] .screen-link-dot{background:#c4b5fd;box-shadow:0 0 0 3px #c4b5fd33}
+    #agent-status{position:relative;display:grid;grid-template-columns:12px minmax(0,1fr) auto;grid-template-areas:"dot identity state" "dot task task" "dot meta meta";column-gap:10px;row-gap:4px;padding:12px 14px 13px}
+    #agent-status-dot{grid-area:dot;align-self:start;width:10px;height:10px;margin-top:4px;border-radius:50%;background:#64748b;box-shadow:0 0 0 4px #64748b24}
+    #agent-status-identity{grid-area:identity;min-width:0}
+    #agent-status-name{font-size:14px;font-weight:800;line-height:1.15}
+    #agent-status-role{margin-left:7px;color:#94a3b8;font-size:11px;font-weight:650}
+    #agent-status-state{grid-area:state;align-self:start;padding:3px 7px;border:1px solid #64748b55;border-radius:999px;color:#94a3b8;font-size:9px;font-weight:850;line-height:1;text-transform:uppercase;letter-spacing:.08em}
+    #agent-status-task{grid-area:task;overflow:hidden;color:#e2e8f0;font-size:12px;font-weight:600;line-height:1.3;text-overflow:ellipsis;white-space:nowrap}
+    #agent-status-meta{grid-area:meta;display:flex;align-items:center;justify-content:space-between;gap:12px;padding-right:34px;color:#94a3b8;font-size:10px;font-weight:650;line-height:1.2}
+    #agent-status-activity{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    #screen-connection{display:flex;align-items:center;gap:5px;flex:none}
+    #screen-connection::before{content:"";width:6px;height:6px;border-radius:50%;background:#f59e0b}
+    #agent-command-header[data-connection="live"] #screen-connection{color:#86efac}
+    #agent-command-header[data-connection="live"] #screen-connection::before{background:#22c55e}
+    #agent-command-header[data-connection="reconnecting"] #screen-connection{color:#fcd34d}
+    #agent-command-header[data-state="idle"] #agent-status-dot{background:#22c55e;box-shadow:0 0 0 4px #22c55e24}
+    #agent-command-header[data-state="working"] #agent-status-dot{background:#3b82f6;box-shadow:0 0 0 4px #3b82f624;animation:status-pulse 1.8s ease-out infinite}
+    #agent-command-header[data-state="waiting_approval"] #agent-status-dot{background:#f59e0b;box-shadow:0 0 0 4px #f59e0b24}
+    #agent-command-header[data-state="error"] #agent-status-dot{background:#ef4444;box-shadow:0 0 0 4px #ef444424}
+    #agent-command-header[data-state="offline"] #agent-status-dot{background:#64748b;box-shadow:0 0 0 4px #64748b24}
+    #agent-header-toggle{position:absolute;right:0;bottom:0;width:44px;height:44px;border:0;border-radius:12px;background:transparent;color:#94a3b8;font:800 15px/1 system-ui;cursor:pointer;touch-action:manipulation}
+    #agent-header-toggle:hover,#agent-header-toggle:focus-visible{background:#ffffff12;color:#fff;outline:none}
+    #agent-command-header[data-collapsed="true"]{width:min(330px,calc(100vw - 20px));border-radius:15px}
+    #agent-command-header[data-collapsed="true"] #screen-switcher{display:none}
+    #agent-command-header[data-collapsed="true"] #agent-status{grid-template-columns:10px minmax(0,1fr) auto;grid-template-areas:"dot identity state";align-items:center;padding:10px 40px 10px 13px}
+    #agent-command-header[data-collapsed="true"] #agent-status-dot{align-self:center;margin-top:0}
+    #agent-command-header[data-collapsed="true"] #agent-status-role,#agent-command-header[data-collapsed="true"] #agent-status-task,#agent-command-header[data-collapsed="true"] #agent-status-meta{display:none}
+    #agent-command-header[data-collapsed="true"] #agent-header-toggle{bottom:0;transform:rotate(180deg)}
+    @keyframes status-pulse{0%{box-shadow:0 0 0 0 #3b82f677}70%{box-shadow:0 0 0 7px #3b82f600}100%{box-shadow:0 0 0 0 #3b82f600}}
     #mobile-keyboard{position:fixed;z-index:20;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));display:flex;align-items:center;gap:8px;font:600 14px/1 system-ui,-apple-system,sans-serif}
     #mobile-keyboard button{min-height:44px;border:1px solid #ffffff2c;border-radius:12px;padding:0 14px;background:#111827e8;color:#f8fafc;box-shadow:0 8px 24px #0008;touch-action:manipulation}
-    #mobile-keyboard-button{font-size:18px;min-width:48px;padding:0 12px}
-    #mobile-keyboard-panel{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #ffffff2c;border-radius:14px;background:#0f172aeF;box-shadow:0 10px 30px #0009}
+    #mobile-keyboard-button{min-width:48px;padding:0 12px;font-size:18px}
+    #mobile-keyboard-panel{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #ffffff2c;border-radius:14px;background:#0f172aef;box-shadow:0 10px 30px #0009}
     #mobile-keyboard-panel[hidden]{display:none}
     #mobile-keyboard-input{width:min(56vw,280px);height:44px;border:1px solid #64748b;border-radius:10px;padding:0 12px;background:#f8fafc;color:#0f172a;font:500 16px/1 system-ui,-apple-system,sans-serif;outline:none}
     #mobile-keyboard-input:focus{border-color:#60a5fa;box-shadow:0 0 0 3px #3b82f633}
-    @media (pointer:fine) and (min-width:900px){#screen-switcher,#agent-status,#mobile-keyboard{opacity:.78;transition:opacity .15s}#screen-switcher:hover,#screen-switcher:focus-within,#agent-status:hover,#mobile-keyboard:hover,#mobile-keyboard:focus-within{opacity:1}}
-    @media (max-width:720px){#agent-status{top:calc(max(8px,env(safe-area-inset-top)) + 58px);right:50%;width:min(360px,calc(100vw - 20px));transform:translateX(50%)}}
-    @media (max-width:480px){#screen-switcher{top:max(8px,env(safe-area-inset-top));padding:3px;border-radius:14px}#screen-switcher a{min-width:84px;min-height:44px;padding:0 11px;font-size:12px}}
+    @media (pointer:fine) and (min-width:900px){#agent-command-header,#mobile-keyboard{opacity:.82}#agent-command-header:hover,#agent-command-header:focus-within,#mobile-keyboard:hover,#mobile-keyboard:focus-within{opacity:1}}
+    @media (max-width:480px){#agent-command-header{width:calc(100vw - 16px)}#screen-switcher a{min-height:48px;padding:6px 10px}#agent-status{padding:11px 12px 13px}#agent-status-role{display:block;margin:3px 0 0}}
+    @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
   </style>
 </head>
 <body>
-  <nav id="screen-switcher" aria-label="Switch agent screen">
-    <a href="/screen/1/" data-screen="1">Screen 1</a>
-    <a href="/screen/2/" data-screen="2">Screen 2</a>
-  </nav>
+  <header id="agent-command-header" data-state="offline" data-connection="reconnecting" data-collapsed="false">
+    <nav id="screen-switcher" aria-label="Switch agent screen">
+      <a href="/screen/1/" data-screen="1" data-agent="Iris" data-agent-name="Iris" data-agent-role="Chief of Staff">
+        <span class="screen-link-dot" aria-hidden="true"></span>
+        <span class="screen-link-name">IRIS · S1</span>
+        <span class="screen-link-role">Chief of Staff</span>
+      </a>
+      <a href="/screen/2/" data-screen="2" data-agent="Tara" data-agent-name="Tara" data-agent-role="Recruitment Agent">
+        <span class="screen-link-dot" aria-hidden="true"></span>
+        <span class="screen-link-name">TARA · S2</span>
+        <span class="screen-link-role">Recruitment Agent</span>
+      </a>
+    </nav>
 
-  <aside id="agent-status" data-agent="Tara" data-state="offline" aria-live="polite" hidden>
-    <span id="agent-status-dot" aria-hidden="true"></span>
-    <div id="agent-status-name">Tara <span id="agent-status-state">Offline</span></div>
-    <div id="agent-status-task">Recruitment Agent unavailable</div>
-  </aside>
+    <aside id="agent-status" aria-live="polite">
+      <span id="agent-status-dot" aria-hidden="true"></span>
+      <div id="agent-status-identity"><span id="agent-status-name">Agent</span><span id="agent-status-role">Role</span></div>
+      <span id="agent-status-state">Offline</span>
+      <div id="agent-status-task">Status unavailable</div>
+      <div id="agent-status-meta">
+        <span id="agent-status-activity">Updated time unavailable</span>
+        <span id="screen-connection"><span id="screen-connection-state">Reconnecting</span></span>
+      </div>
+    </aside>
+    <button id="agent-header-toggle" type="button" aria-label="Collapse agent header" aria-expanded="true">⌃</button>
+  </header>
 
   <div id="mobile-keyboard" aria-label="Remote keyboard controls">
     <div id="mobile-keyboard-panel" hidden>
@@ -66,18 +105,29 @@
 
   const screenNumber = match[1];
   const activeScreenLink = document.querySelector(`#screen-switcher [data-screen="${screenNumber}"]`);
-  activeScreenLink?.setAttribute("aria-current", "page");
-  document.title = `Screen ${screenNumber}`;
+  if (!activeScreenLink) throw new Error("Unknown agent screen");
+  activeScreenLink.setAttribute("aria-current", "page");
+  const activeAgent = {
+    name: activeScreenLink.dataset.agentName,
+    role: activeScreenLink.dataset.agentRole,
+  };
+  document.title = `${activeAgent.name} · Agent Screen`;
+
   const socketURL = `wss://${location.host}/screen/${screenNumber}/websockify`;
+  const commandHeader = document.getElementById("agent-command-header");
+  const headerToggle = document.getElementById("agent-header-toggle");
   const keyboardButton = document.getElementById("mobile-keyboard-button");
   const keyboardPanel = document.getElementById("mobile-keyboard-panel");
   const keyboardInput = document.getElementById("mobile-keyboard-input");
   const keyboardDone = document.getElementById("mobile-keyboard-done");
-  const agentStatus = document.getElementById("agent-status");
+  const agentStatusName = document.getElementById("agent-status-name");
+  const agentStatusRole = document.getElementById("agent-status-role");
   const agentStatusState = document.getElementById("agent-status-state");
   const agentStatusTask = document.getElementById("agent-status-task");
+  const agentStatusActivity = document.getElementById("agent-status-activity");
+  const screenConnectionState = document.getElementById("screen-connection-state");
   const statusLabels = {
-    idle: "Idle",
+    idle: "Ready",
     working: "Working",
     waiting_approval: "Waiting for Boss",
     error: "Attention",
@@ -85,26 +135,57 @@
   };
   let rfb = null;
   let reconnectTimer = null;
+  let collapseTimer = null;
   let composing = false;
+  let statusUpdatedAt = "";
+
+  agentStatusName.textContent = activeAgent.name;
+  agentStatusRole.textContent = activeAgent.role;
+
+  function setConnectionState(state) {
+    commandHeader.dataset.connection = state;
+    screenConnectionState.textContent = state === "live" ? "Screen Live" : "Reconnecting";
+  }
 
   function connect() {
     clearTimeout(reconnectTimer);
+    setConnectionState("reconnecting");
     rfb = new RFB(document.body, socketURL);
     rfb.scaleViewport = true;
     rfb.resizeSession = false;
     rfb.showDotCursor = true;
+    rfb.addEventListener("connect", () => setConnectionState("live"), { once: true });
     rfb.addEventListener("disconnect", () => {
       rfb = null;
+      setConnectionState("reconnecting");
       reconnectTimer = setTimeout(connect, 2000);
     }, { once: true });
   }
 
+  function relativeTime(value) {
+    const timestamp = Date.parse(value);
+    if (!Number.isFinite(timestamp)) return "Updated time unavailable";
+    const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+    if (seconds < 15) return "Updated just now";
+    if (seconds < 60) return `Updated ${seconds}s ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `Updated ${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `Updated ${hours}h ago`;
+    return `Updated ${Math.floor(hours / 24)}d ago`;
+  }
+
+  function refreshRelativeTime() {
+    agentStatusActivity.textContent = relativeTime(statusUpdatedAt);
+  }
+
   function setAgentStatus(state, task, updatedAt = "") {
     const safeState = Object.hasOwn(statusLabels, state) ? state : "offline";
-    agentStatus.dataset.state = safeState;
+    commandHeader.dataset.state = safeState;
     agentStatusState.textContent = statusLabels[safeState];
-    agentStatusTask.textContent = task || "Recruitment Agent unavailable";
-    agentStatus.title = updatedAt ? `Updated ${updatedAt}` : "Status unavailable";
+    agentStatusTask.textContent = task || `${activeAgent.role} unavailable`;
+    statusUpdatedAt = updatedAt;
+    refreshRelativeTime();
   }
 
   async function refreshAgentStatus() {
@@ -112,11 +193,23 @@
       const response = await fetch(`/status/screen-${screenNumber}.json?t=${Date.now()}`, { cache: "no-store" });
       if (!response.ok) throw new Error(`status ${response.status}`);
       const payload = await response.json();
-      if (payload.schema !== 1 || payload.screen !== 2 || payload.agent !== "Tara") throw new Error("invalid status payload");
+      if (payload.schema !== 1 || payload.screen !== Number(screenNumber) || payload.agent !== activeAgent.name) throw new Error("invalid status payload");
       setAgentStatus(payload.state, payload.task, payload.updated_at);
     } catch (_error) {
-      setAgentStatus("offline", "Recruitment Agent unavailable");
+      setAgentStatus("offline", `${activeAgent.role} unavailable`);
     }
+  }
+
+  function setHeaderCollapsed(collapsed) {
+    commandHeader.dataset.collapsed = String(collapsed);
+    headerToggle.setAttribute("aria-expanded", String(!collapsed));
+    headerToggle.setAttribute("aria-label", collapsed ? "Expand agent header" : "Collapse agent header");
+  }
+
+  function scheduleMobileCollapse() {
+    clearTimeout(collapseTimer);
+    if (!matchMedia("(max-width: 720px)").matches) return;
+    collapseTimer = setTimeout(() => setHeaderCollapsed(true), 5000);
   }
 
   function sendText(text) {
@@ -141,6 +234,11 @@
     rfb?.focus({ preventScroll: true });
   }
 
+  headerToggle.addEventListener("click", () => {
+    const collapsed = commandHeader.dataset.collapsed === "true";
+    setHeaderCollapsed(!collapsed);
+    if (collapsed) scheduleMobileCollapse();
+  });
   keyboardButton.addEventListener("click", () => {
     if (keyboardPanel.hidden) openKeyboard(); else closeKeyboard();
   });
@@ -166,11 +264,10 @@
     rfb?.sendKey(special[0], special[1]);
   });
 
-  if (screenNumber === "2") {
-    agentStatus.hidden = false;
-    refreshAgentStatus();
-    setInterval(refreshAgentStatus, 5000);
-  }
+  refreshAgentStatus();
+  setInterval(refreshAgentStatus, 5000);
+  setInterval(refreshRelativeTime, 15000);
+  scheduleMobileCollapse();
   connect();
 </script>
 </body>

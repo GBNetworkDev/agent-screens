@@ -76,11 +76,19 @@ The Screen 2 CUA unit uses `/home/agent/.cache/cua-driver/cua-driver-screen2.soc
 
 To connect Hermes to both sockets through native MCP tools without exposing backend listeners, follow the sanitized guide in [`integrations/hermes/README.md`](integrations/hermes/README.md). All real SSH hostnames, ports, identity paths, and credentials stay in the operator environment and must not be committed.
 
-### Optional agent status
+### Agent command header and live status
 
-The clean viewer can show a compact, live status card for a dedicated screen worker. Publish a bounded status document atomically:
+The clean viewer presents each screen as a named agent: `Iris · S1` for the Chief of Staff workspace and `Tara · S2` for recruitment. Both screens load a bounded status document, show live/reconnecting screen health, and collapse to a compact status pill after five seconds on mobile. The header is read-only; it does not expose restart, pause, or agent-action controls.
+
+Publish each screen status atomically:
 
 ```bash
+sudo bin/update_screen_status.py \
+  --screen 1 \
+  --agent Iris \
+  --state idle \
+  --task "Ready to coordinate operations"
+
 sudo bin/update_screen_status.py \
   --screen 2 \
   --agent Tara \
@@ -88,7 +96,7 @@ sudo bin/update_screen_status.py \
   --task "Ready for recruitment checks"
 ```
 
-The default output is `/var/www/agent-screen/status/screen-2.json`. Override it with `--output-dir` or `AGENT_SCREEN_STATUS_DIR`. Allowed states are `idle`, `working`, `waiting_approval`, `error`, and `offline`; task text is limited to 120 characters. Keep status text free of secrets and personal data.
+The default outputs are `/var/www/agent-screen/status/screen-1.json` and `screen-2.json`. Override the directory with `--output-dir` or `AGENT_SCREEN_STATUS_DIR`. Allowed states are `idle`, `working`, `waiting_approval`, `error`, and `offline`; the viewer renders `idle` as **Ready**. Task text is limited to 120 characters. Keep all status text free of secrets and personal data.
 
 Set the hostname used by the operator CLI through the service environment or shell:
 
