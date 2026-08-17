@@ -287,6 +287,8 @@ class ScreenRuntimeTests(unittest.TestCase):
         self.assertIn('data-agent-name="Mira"', viewer)
         self.assertIn('data-agent-role="Product Design &amp; UX Agent"', viewer)
         self.assertIn('@media (max-width:480px){#agent-command-header{left:8px;right:8px;width:auto;transform:none}', viewer)
+        self.assertIn('#agent-command-header[data-collapsed="true"]{left:50%;right:auto;width:min(340px,calc(100vw - 32px));transform:translateX(-50%)}', viewer)
+        self.assertIn('#agent-command-header[data-collapsed="true"] #agent-header-toggle{right:4px;top:50%;bottom:auto;width:40px;height:40px;background:transparent!important;box-shadow:none;-webkit-tap-highlight-color:transparent;transform:translateY(-50%) rotate(180deg)}', viewer)
         self.assertIn('id="agent-status-role"', viewer)
         self.assertIn('id="agent-status-activity"', viewer)
         self.assertIn('id="screen-connection-state"', viewer)
