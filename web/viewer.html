@@ -60,8 +60,9 @@
     @keyframes status-pulse{0%{box-shadow:0 0 0 0 #3b82f677}70%{box-shadow:0 0 0 7px #3b82f600}100%{box-shadow:0 0 0 0 #3b82f600}}
     #mobile-keyboard{position:fixed;z-index:20;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));display:flex;align-items:center;gap:8px;font:600 14px/1 system-ui,-apple-system,sans-serif}
     #mobile-keyboard button{min-height:44px;border:1px solid #ffffff2c;border-radius:12px;padding:0 14px;background:#111827e8;color:#f8fafc;box-shadow:0 8px 24px #0008;touch-action:manipulation}
-    #mobile-keyboard-button,#mobile-pointer-button,#mobile-clipboard-button{display:grid;place-items:center;width:48px;height:44px;min-width:48px;min-height:44px;border:1px solid #ffffff2c;border-radius:12px;padding:0;background:#111827e8;color:#f8fafc;box-shadow:0 8px 24px #0008;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+    #mobile-keyboard-button,#mobile-help-button,#mobile-pointer-button,#mobile-clipboard-button{display:grid;place-items:center;width:48px;height:44px;min-width:48px;min-height:44px;border:1px solid #ffffff2c;border-radius:12px;padding:0;background:#111827e8;color:#f8fafc;box-shadow:0 8px 24px #0008;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
     #mobile-keyboard-button svg,#mobile-pointer-button svg,#mobile-clipboard-button svg{display:block;width:20px;height:20px}
+    #mobile-help-button{font:750 22px/1 system-ui,-apple-system,sans-serif}
     #mobile-keyboard #mobile-keyboard-button{position:relative;padding:0;appearance:none;-webkit-appearance:none;line-height:0}
     #mobile-keyboard-button .keyboard-icon{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
     #mobile-keyboard-input{position:fixed;left:50%;bottom:0;width:1px;height:1px;opacity:.01;border:0;padding:0;pointer-events:none;clip-path:inset(50%)}
@@ -86,11 +87,27 @@
     #mobile-clipboard-menu button+button{border-top:1px solid #ffffff16}
     #mobile-clipboard-menu button:active{background:#ffffff12}
     #mobile-clipboard-menu svg{width:22px;height:22px;flex:none}
-    #mobile-keyboard-button:hover,#mobile-keyboard-button:focus-visible,#mobile-pointer-button:hover,#mobile-pointer-button:focus-visible,#mobile-clipboard-button:hover,#mobile-clipboard-button:focus-visible{background:#1e293be8;color:#fff;outline:none}
-    #mobile-keyboard-button:active,#mobile-pointer-button:active,#mobile-clipboard-button:active{transform:scale(.96)}
+    #mobile-keyboard-button:hover,#mobile-keyboard-button:focus-visible,#mobile-help-button:hover,#mobile-help-button:focus-visible,#mobile-pointer-button:hover,#mobile-pointer-button:focus-visible,#mobile-clipboard-button:hover,#mobile-clipboard-button:focus-visible{background:#1e293be8;color:#fff;outline:none}
+    #mobile-keyboard-button:active,#mobile-help-button:active,#mobile-pointer-button:active,#mobile-clipboard-button:active{transform:scale(.96)}
+    #mobile-guide-overlay{position:fixed;z-index:50;inset:0;display:flex;align-items:flex-end;justify-content:center;padding-top:max(24px,env(safe-area-inset-top));background:#020617b8;backdrop-filter:blur(6px);font-family:system-ui,-apple-system,sans-serif}
+    #mobile-guide-overlay[hidden]{display:none}
+    #mobile-guide-sheet{width:min(560px,100%);max-height:calc(100dvh - max(24px,env(safe-area-inset-top)));overflow:auto;overscroll-behavior:contain;border:1px solid #ffffff20;border-bottom:0;border-radius:26px 26px 0 0;padding:0 18px calc(24px + env(safe-area-inset-bottom));background:#111318f7;color:#f8fafc;box-shadow:0 -24px 64px #000b}
+    #mobile-guide-header{position:sticky;z-index:1;top:0;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:19px 0 14px;background:linear-gradient(#111318 82%,#11131800)}
+    #mobile-guide-title{margin:0;font-size:22px;font-weight:800;line-height:1.2;letter-spacing:-.02em}
+    #mobile-guide-close{display:grid;place-items:center;width:42px;height:42px;flex:none;border:1px solid #ffffff18;border-radius:999px;padding:0;background:#272a31;color:#f8fafc;font-size:25px;line-height:1;touch-action:manipulation}
+    .mobile-guide-section{margin:4px 0 20px}
+    .mobile-guide-section h3{margin:0 0 9px 2px;color:#cbd5e1;font-size:15px;font-weight:800;line-height:1.25}
+    .mobile-guide-list{overflow:hidden;border:1px solid #ffffff16;border-radius:18px;background:#1b1e24}
+    .mobile-guide-item{display:grid;grid-template-columns:34px minmax(0,1fr);gap:12px;align-items:start;padding:14px 15px}
+    .mobile-guide-item+.mobile-guide-item{border-top:1px solid #ffffff12}
+    .mobile-guide-icon{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:#ffffff0d;color:#f8fafc}
+    .mobile-guide-icon svg{width:19px;height:19px}
+    .mobile-guide-copy strong{display:block;margin:1px 0 4px;font-size:14px;font-weight:800;line-height:1.2}
+    .mobile-guide-copy span{display:block;color:#aeb6c4;font-size:12px;font-weight:550;line-height:1.42}
+    #mobile-guide-hint{margin:0 2px 2px;color:#7f8a9c;font-size:11px;font-weight:600;line-height:1.4;text-align:center}
     #mobile-action-toast{position:fixed;z-index:40;left:50%;bottom:max(78px,calc(env(safe-area-inset-bottom) + 70px));max-width:calc(100vw - 32px);transform:translateX(-50%);padding:9px 13px;border:1px solid #ffffff24;border-radius:999px;background:#0f172af2;color:#f8fafc;box-shadow:0 10px 28px #000a;font:700 12px/1.2 system-ui,-apple-system,sans-serif;white-space:nowrap}
     #mobile-action-toast[hidden]{display:none}
-    @media (pointer:fine) and (min-width:900px){#agent-command-header,#mobile-keyboard{opacity:.82}#agent-command-header:hover,#agent-command-header:focus-within,#mobile-keyboard:hover,#mobile-keyboard:focus-within{opacity:1}#mobile-pointer-button,#mobile-pointer-menu{display:none}}
+    @media (pointer:fine) and (min-width:900px){#agent-command-header,#mobile-keyboard{opacity:.82}#agent-command-header:hover,#agent-command-header:focus-within,#mobile-keyboard:hover,#mobile-keyboard:focus-within{opacity:1}#mobile-help-button,#mobile-pointer-button,#mobile-pointer-menu{display:none}}
     @media (max-width:720px){#mobile-clipboard{display:block}}
     @media (max-width:480px){#agent-command-header{left:8px;right:8px;width:auto;transform:none}#agent-header-toggle{background:transparent!important;box-shadow:none;-webkit-tap-highlight-color:transparent}#agent-command-header[data-collapsed="true"]{left:50%;right:auto;width:min(340px,calc(100vw - 32px));transform:translateX(-50%)}#agent-command-header[data-collapsed="true"] #agent-status{column-gap:12px;padding:11px 52px 11px 15px}#agent-command-header[data-collapsed="true"] #agent-status-state{align-self:center}#agent-command-header[data-collapsed="true"] #agent-header-toggle{right:4px;top:50%;bottom:auto;width:40px;height:40px;background:transparent!important;box-shadow:none;-webkit-tap-highlight-color:transparent;transform:translateY(-50%) rotate(180deg)}#screen-switcher a{min-height:48px;padding:6px 10px}#agent-status{padding:11px 12px 13px}#agent-status-role{display:block;margin:3px 0 0}}
     @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
@@ -148,6 +165,7 @@
         <span>Recenter pointer</span>
       </button>
     </div>
+    <button id="mobile-help-button" type="button" aria-label="Open interaction guide" aria-haspopup="dialog" aria-expanded="false">?</button>
     <button id="mobile-pointer-button" type="button" aria-label="Open pointer controls" aria-haspopup="menu" aria-expanded="false" aria-pressed="false">
       <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
     </button>
@@ -188,6 +206,66 @@
   </div>
   <div id="mobile-action-toast" role="status" aria-live="polite" hidden></div>
 
+  <div id="mobile-guide-overlay" hidden>
+    <section id="mobile-guide-sheet" role="dialog" aria-modal="true" aria-labelledby="mobile-guide-title">
+      <header id="mobile-guide-header">
+        <h2 id="mobile-guide-title">Using the Computer</h2>
+        <button id="mobile-guide-close" type="button" aria-label="Close interaction guide">×</button>
+      </header>
+
+      <div class="mobile-guide-section">
+        <h3>Moving Around</h3>
+        <div class="mobile-guide-list">
+          <div class="mobile-guide-item">
+            <span class="mobile-guide-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 3 14 9-7 1-4 7z"/></svg></span>
+            <div class="mobile-guide-copy"><strong>Direct touch</strong><span>Slide one finger to move the pointer. Tap to click.</span></div>
+          </div>
+          <div class="mobile-guide-item">
+            <span class="mobile-guide-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v12M4.5 6.5 8 3l3.5 3.5M16 21V9m-3.5 8.5L16 21l3.5-3.5"/></svg></span>
+            <div class="mobile-guide-copy"><strong>Scroll</strong><span>Drag with two fingers to scroll vertically or horizontally.</span></div>
+          </div>
+          <div class="mobile-guide-item">
+            <span class="mobile-guide-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="6"/><path d="M12 2v7M12 9h6"/></svg></span>
+            <div class="mobile-guide-copy"><strong>Right-click</strong><span>Tap with two fingers, or press and hold.</span></div>
+          </div>
+          <div class="mobile-guide-item">
+            <span class="mobile-guide-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5M10.5 7.5v6M7.5 10.5h6"/></svg></span>
+            <div class="mobile-guide-copy"><strong>Zoom</strong><span>Pinch to zoom in supported apps. Use two fingers to move around.</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mobile-guide-section">
+        <h3>Typing and the Clipboard</h3>
+        <div class="mobile-guide-list">
+          <div class="mobile-guide-item">
+            <span class="mobile-guide-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 13h.01M10 13h.01M14 13h.01M18 13h.01M7 16h10"/></svg></span>
+            <div class="mobile-guide-copy"><strong>Type</strong><span>Tap the keyboard button to open your phone keyboard.</span></div>
+          </div>
+          <div class="mobile-guide-item">
+            <span class="mobile-guide-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="7" width="14" height="14" rx="2"/><path d="M3 15V5a2 2 0 0 1 2-2h10M9 3h4v4H9z"/></svg></span>
+            <div class="mobile-guide-copy"><strong>Copy and paste</strong><span>Use the clipboard button to copy to or paste from your phone.</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mobile-guide-section">
+        <h3>When a Pointer Is Easier</h3>
+        <div class="mobile-guide-list">
+          <div class="mobile-guide-item">
+            <span class="mobile-guide-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 3 14 9-7 1-4 7z"/><path d="m13 13 4 6"/></svg></span>
+            <div class="mobile-guide-copy"><strong>Trackpad mode</strong><span>Open the ••• menu and enable Trackpad mode. Swipe anywhere to move the visible pointer, then tap to click.</span></div>
+          </div>
+          <div class="mobile-guide-item">
+            <span class="mobile-guide-icon"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="7"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></span>
+            <div class="mobile-guide-copy"><strong>Drag and recenter</strong><span>Double-tap and hold to drag. Use Recenter pointer from the ••• menu whenever needed.</span></div>
+          </div>
+        </div>
+      </div>
+      <p id="mobile-guide-hint">Tap outside this guide or use × to close it.</p>
+    </section>
+  </div>
+
 <script type="module">
   import RFB from "./core/rfb.js";
 
@@ -209,6 +287,10 @@
   const headerToggle = document.getElementById("agent-header-toggle");
   const keyboardButton = document.getElementById("mobile-keyboard-button");
   const keyboardInput = document.getElementById("mobile-keyboard-input");
+  const helpButton = document.getElementById("mobile-help-button");
+  const guideOverlay = document.getElementById("mobile-guide-overlay");
+  const guideSheet = document.getElementById("mobile-guide-sheet");
+  const guideCloseButton = document.getElementById("mobile-guide-close");
   const pointerButton = document.getElementById("mobile-pointer-button");
   const pointerMenu = document.getElementById("mobile-pointer-menu");
   const trackpadModeToggle = document.getElementById("trackpad-mode-toggle");
@@ -386,6 +468,20 @@
     if (open) {
       clipboardMenu.hidden = true;
       clipboardButton.setAttribute("aria-expanded", "false");
+    }
+  }
+
+  function setGuideOpen(open) {
+    guideOverlay.hidden = !open;
+    helpButton.setAttribute("aria-expanded", String(open));
+    if (open) {
+      dismissNativeKeyboardForClipboard();
+      setPointerMenuOpen(false);
+      setClipboardMenuOpen(false);
+      guideSheet.scrollTop = 0;
+      requestAnimationFrame(() => guideCloseButton.focus({ preventScroll: true }));
+    } else {
+      helpButton.focus({ preventScroll: true });
     }
   }
 
@@ -753,6 +849,12 @@
     setPointerMenuOpen(false);
     if (document.activeElement === keyboardInput) closeKeyboard(); else openKeyboard();
   });
+  helpButton.addEventListener("pointerdown", dismissNativeKeyboardForClipboard);
+  helpButton.addEventListener("click", () => setGuideOpen(true));
+  guideCloseButton.addEventListener("click", () => setGuideOpen(false));
+  guideOverlay.addEventListener("click", event => {
+    if (event.target === guideOverlay) setGuideOpen(false);
+  });
   pointerButton.addEventListener("pointerdown", dismissNativeKeyboardForClipboard);
   pointerButton.addEventListener("click", () => setPointerMenuOpen(pointerMenu.hidden));
   trackpadModeToggle.addEventListener("click", () => setTrackpadMode(!trackpadEnabled));
@@ -771,6 +873,13 @@
   document.addEventListener("pointerdown", event => {
     if (!event.target.closest("#mobile-clipboard")) setClipboardMenuOpen(false);
     if (!event.target.closest("#mobile-keyboard")) setPointerMenuOpen(false);
+  });
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && !guideOverlay.hidden) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      setGuideOpen(false);
+    }
   });
   keyboardInput.addEventListener("blur", () => keyboardButton.setAttribute("aria-expanded", "false"));
   keyboardInput.addEventListener("compositionstart", () => { composing = true; });
