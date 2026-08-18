@@ -226,7 +226,8 @@
   };
   const KEYBOARD_SENTINEL = "\u200b";
   const REMOTE_CLIPBOARD_TIMEOUT_MS = 2500;
-  const TRACKPAD_SENSITIVITY = 1.45;
+  const TRACKPAD_MIN_GAIN = 0.72;
+  const TRACKPAD_MAX_GAIN = 1.15;
   const TRACKPAD_TAP_MOVE_PX = 8;
   const TRACKPAD_DOUBLE_TAP_MS = 360;
   const TRACKPAD_HOLD_MS = 180;
@@ -243,6 +244,8 @@
   let trackpadLastTapAt = 0;
   let trackpadHoldTimer = null;
   let trackpadDragging = false;
+  let trackpadMoveFrame = null;
+  let trackpadPendingDelta = { x: 0, y: 0 };
   let statusUpdatedAt = "";
 
   agentStatusName.textContent = activeAgent.name;
@@ -408,6 +411,33 @@
     return true;
   }
 
+  function flushTrackpadMove() {
+    trackpadMoveFrame = null;
+    const deltaX = trackpadPendingDelta.x;
+    const deltaY = trackpadPendingDelta.y;
+    trackpadPendingDelta = { x: 0, y: 0 };
+    const distance = Math.hypot(deltaX, deltaY);
+    if (!distance) return;
+    const gain = Math.min(TRACKPAD_MAX_GAIN, TRACKPAD_MIN_GAIN + (distance / 24) * (TRACKPAD_MAX_GAIN - TRACKPAD_MIN_GAIN));
+    trackpadPointer.x += deltaX * gain;
+    trackpadPointer.y += deltaY * gain;
+    dispatchTrackpadMouse("mousemove", 0, trackpadDragging ? 1 : 0);
+  }
+
+  function queueTrackpadMove(deltaX, deltaY) {
+    trackpadPendingDelta.x += deltaX;
+    trackpadPendingDelta.y += deltaY;
+    if (trackpadMoveFrame === null) trackpadMoveFrame = requestAnimationFrame(flushTrackpadMove);
+  }
+
+  function flushPendingTrackpadMove() {
+    if (trackpadMoveFrame !== null) {
+      cancelAnimationFrame(trackpadMoveFrame);
+      trackpadMoveFrame = null;
+    }
+    flushTrackpadMove();
+  }
+
   function dispatchTrackpadWheel(deltaX, deltaY) {
     const canvas = clampTrackpadPointer();
     if (!canvas) return;
@@ -428,6 +458,9 @@
       showMobileToast("Screen is reconnecting");
       return;
     }
+    if (trackpadMoveFrame !== null) cancelAnimationFrame(trackpadMoveFrame);
+    trackpadMoveFrame = null;
+    trackpadPendingDelta = { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
     trackpadPointer = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
     dispatchTrackpadMouse("mousemove");
@@ -436,6 +469,13 @@
   }
 
   function setTrackpadMode(enabled) {
+    if (!enabled) {
+      clearTrackpadHold();
+      flushPendingTrackpadMove();
+      if (trackpadDragging) dispatchTrackpadMouse("mouseup", 0, 0);
+      trackpadDragging = false;
+      trackpadGesture = null;
+    }
     trackpadEnabled = enabled;
     trackpadSurface.hidden = !enabled;
     trackpadModeToggle.setAttribute("aria-checked", String(enabled));
@@ -618,9 +658,7 @@
       }
       trackpadGesture.lastX = touch.clientX;
       trackpadGesture.lastY = touch.clientY;
-      trackpadPointer.x += dx * TRACKPAD_SENSITIVITY;
-      trackpadPointer.y += dy * TRACKPAD_SENSITIVITY;
-      dispatchTrackpadMouse("mousemove", 0, trackpadDragging ? 1 : 0);
+      queueTrackpadMove(dx, dy);
     } else if (trackpadGesture.kind === "two" && event.touches.length === 2) {
       const center = touchCenter(event.touches);
       const dx = center.x - trackpadGesture.lastX;
@@ -636,6 +674,7 @@
 
   function finishTrackpadTouch(cancelled = false) {
     clearTrackpadHold();
+    flushPendingTrackpadMove();
     if (!trackpadGesture) return;
     if (trackpadDragging) {
       dispatchTrackpadMouse("mouseup", 0, 0);
