@@ -10,7 +10,7 @@ Each screen gets its own X11 display, desktop session, Chrome profile, VNC/WebSo
 - Separate Chrome profiles and CDP endpoints per screen
 - Minimal XFCE stack with `xfwm4`, Picom, Plank, Thunar, and XFCE Terminal
 - Responsive web launcher and clean noVNC viewer
-- Mobile native keyboard, bidirectional phone clipboard, direct-touch gestures, and relative trackpad mode with pointer recentering
+- Mobile native keyboard with editable-field auto-open, bidirectional phone clipboard, direct-touch gestures, relative trackpad mode, pointer recentering, and an in-app interaction guide
 - Optional per-screen agent status cards backed by atomic, bounded JSON updates
 - Loopback-only VNC, Websockify, and CDP listeners
 - Nginx HTTPS routing with a VPN allowlist
@@ -20,12 +20,12 @@ Each screen gets its own X11 display, desktop session, Chrome profile, VNC/WebSo
 
 ## Architecture
 
-| Screen | Display | VNC | Websockify | CDP | Chrome profile |
-|---|---:|---:|---:|---:|---|
-| 1 | `:1` | `5900` | `6081` | `9222` | `/home/agent/chrome-profile-1` |
-| 2 | `:2` | `5902` | `6082` | `9223` | `/home/agent/chrome-profile-2` |
-| 3 | `:3` | `5903` | `6083` | `9224` | `/home/agent/chrome-profile-3` |
-| 4 | `:4` | `5904` | `6084` | `9225` | `/home/agent/chrome-profile-4` |
+| Screen | Display | VNC | Websockify | Input probe | CDP | Chrome profile |
+|---|---:|---:|---:|---:|---:|---|
+| 1 | `:1` | `5900` | `6081` | `6091` | `9222` | `/home/agent/chrome-profile-1` |
+| 2 | `:2` | `5902` | `6082` | `6092` | `9223` | `/home/agent/chrome-profile-2` |
+| 3 | `:3` | `5903` | `6083` | `6093` | `9224` | `/home/agent/chrome-profile-3` |
+| 4 | `:4` | `5904` | `6084` | `6094` | `9225` | `/home/agent/chrome-profile-4` |
 
 All backend ports are intended to listen on `127.0.0.1`. Nginx is the only public-facing entry point.
 
@@ -48,7 +48,7 @@ A Debian-based Linux host with:
 - Python 3.11+
 - Xvfb and X11 utilities
 - `x11vnc`, noVNC, and Websockify
-- `xfwm4`, Picom, Plank, Thunar, XFCE Terminal, and D-Bus
+- `xfwm4`, Picom, Plank, Thunar, XFCE Terminal, D-Bus, and `python3-pyatspi`
 - Google Chrome
 - Nginx and a valid TLS certificate
 - An unprivileged `agent` user
@@ -71,6 +71,7 @@ A Debian-based Linux host with:
 sudo install -o root -g root -m 0755 bin/start_cua_screen.sh /usr/local/libexec/start-cua-screen
 sudo systemctl daemon-reload
 sudo systemctl enable --now agent-screen@1 agent-screen@2 agent-screen@3 agent-screen@4
+sudo systemctl enable --now agent-screen-input-probe@1 agent-screen-input-probe@2 agent-screen-input-probe@3 agent-screen-input-probe@4
 sudo systemctl enable --now agent-screen-chrome@1 agent-screen-chrome@2 agent-screen-chrome@3 agent-screen-chrome@4
 sudo systemctl enable --now agent-screen-cua-screen2.service  # optional
 sudo systemctl enable --now agent-screen-cua@3.service agent-screen-cua@4.service  # optional

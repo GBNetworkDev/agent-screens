@@ -283,6 +283,7 @@
   document.title = `${activeAgent.name} · Agent Screen`;
 
   const socketURL = `wss://${location.host}/screen/${screenNumber}/websockify`;
+  const inputHitTestURL = `/screen/${screenNumber}/input-hit-test`;
   const commandHeader = document.getElementById("agent-command-header");
   const headerToggle = document.getElementById("agent-header-toggle");
   const keyboardButton = document.getElementById("mobile-keyboard-button");
@@ -322,6 +323,9 @@
   const TRACKPAD_TAP_MOVE_PX = 8;
   const TRACKPAD_DOUBLE_TAP_MS = 360;
   const TRACKPAD_HOLD_MS = 180;
+  const INPUT_HINT_DELAY_MS = 90;
+  const INPUT_HINT_MAX_AGE_MS = 3000;
+  const INPUT_HINT_RADIUS_PX = 36;
   const remoteClipboardWaiters = new Set();
   let rfb = null;
   let reconnectTimer = null;
@@ -337,6 +341,9 @@
   let trackpadDragging = false;
   let trackpadMoveFrame = null;
   let trackpadPendingDelta = { x: 0, y: 0 };
+  let inputHintTimer = null;
+  let inputHintRequest = 0;
+  let remoteInputHint = { editable: false, clientX: 0, clientY: 0, updatedAt: 0 };
   let statusUpdatedAt = "";
 
   agentStatusName.textContent = activeAgent.name;
@@ -489,6 +496,21 @@
     return document.querySelector("canvas");
   }
 
+  function handleDirectTouchHint(event) {
+    if (trackpadEnabled || event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    trackpadPointer.x = touch.clientX;
+    trackpadPointer.y = touch.clientY;
+    maybeOpenKeyboardForRemoteTarget();
+    scheduleRemoteInputHint(touch.clientX, touch.clientY, true);
+  }
+
+  function handleDirectKeyboardGesture(event) {
+    if (trackpadEnabled || event.type !== "gesturestart" || event.detail?.type !== "onetap") return;
+    trackpadPointer = { x: event.detail.clientX, y: event.detail.clientY };
+    maybeOpenKeyboardForRemoteTarget();
+  }
+
   function handleDirectDragGesture(event) {
     if (trackpadEnabled || event.detail?.type !== "drag") return;
     event.stopImmediatePropagation();
@@ -503,12 +525,15 @@
     const position = trackpadCanvasPosition(canvas);
     rfb?._handleMouseMove(position.x, position.y);
     rfb?._cursor?.move(trackpadPointer.x, trackpadPointer.y);
+    scheduleRemoteInputHint(trackpadPointer.x, trackpadPointer.y);
   }
 
   function installDirectTouchGestureGuard() {
     const canvas = remoteCanvas();
     if (!canvas) return;
+    canvas.addEventListener("touchstart", handleDirectTouchHint, { capture: true, passive: true });
     for (const eventName of ["gesturestart", "gesturemove", "gestureend"]) {
+      canvas.addEventListener(eventName, handleDirectKeyboardGesture, { capture: true });
       canvas.addEventListener(eventName, handleDirectDragGesture, { capture: true });
     }
   }
@@ -537,6 +562,68 @@
     };
   }
 
+  function remoteInputPoint(clientX, clientY) {
+    const canvas = remoteCanvas();
+    if (!canvas || !rfb?._display) return null;
+    const rect = canvas.getBoundingClientRect();
+    const localX = Math.min(rect.width - 1, Math.max(0, clientX - rect.left));
+    const localY = Math.min(rect.height - 1, Math.max(0, clientY - rect.top));
+    return {
+      x: Math.round(rfb._display.absX(localX)),
+      y: Math.round(rfb._display.absY(localY)),
+    };
+  }
+
+  async function refreshRemoteInputHint(clientX, clientY) {
+    const point = remoteInputPoint(clientX, clientY);
+    if (!point) return;
+    const request = ++inputHintRequest;
+    try {
+      const response = await fetch(`${inputHitTestURL}?x=${point.x}&y=${point.y}`, { cache: "no-store" });
+      if (!response.ok) throw new Error(`input hint ${response.status}`);
+      const payload = await response.json();
+      if (request !== inputHintRequest) return;
+      remoteInputHint = {
+        editable: payload.editable === true,
+        clientX,
+        clientY,
+        updatedAt: Date.now(),
+      };
+      document.body.dataset.remoteInput = remoteInputHint.editable ? "editable" : "other";
+    } catch (_error) {
+      if (request === inputHintRequest) {
+        remoteInputHint = { editable: false, clientX, clientY, updatedAt: Date.now() };
+        document.body.dataset.remoteInput = "unavailable";
+      }
+    }
+  }
+
+  function scheduleRemoteInputHint(clientX, clientY, immediate = false) {
+    clearTimeout(inputHintTimer);
+    if (immediate) {
+      void refreshRemoteInputHint(clientX, clientY);
+      return;
+    }
+    inputHintTimer = setTimeout(() => {
+      void refreshRemoteInputHint(clientX, clientY);
+    }, INPUT_HINT_DELAY_MS);
+  }
+
+  function remoteTargetIsEditable() {
+    const fresh = Date.now() - remoteInputHint.updatedAt <= INPUT_HINT_MAX_AGE_MS;
+    const nearby = Math.hypot(
+      trackpadPointer.x - remoteInputHint.clientX,
+      trackpadPointer.y - remoteInputHint.clientY,
+    ) <= INPUT_HINT_RADIUS_PX;
+    return fresh && nearby && remoteInputHint.editable && guideOverlay.hidden;
+  }
+
+  function maybeOpenKeyboardForRemoteTarget() {
+    if (!remoteTargetIsEditable()) return false;
+    openKeyboard();
+    return true;
+  }
+
   function dispatchTrackpadMouse(type, button = 0, buttons = 0) {
     const canvas = clampTrackpadPointer();
     if (!canvas || !rfb) return false;
@@ -550,6 +637,7 @@
     }
     updateTrackpadPointerVisual();
     rfb?._cursor?.move(trackpadPointer.x, trackpadPointer.y);
+    if (type === "mousemove") scheduleRemoteInputHint(trackpadPointer.x, trackpadPointer.y);
     return true;
   }
 
@@ -756,10 +844,16 @@
   }
 
   function handleTrackpadTouchStart(event) {
-    event.preventDefault();
     clearTrackpadHold();
     if (event.touches.length === 1) {
       const touch = event.touches[0];
+      const keyboardTapHandled = remoteTargetIsEditable();
+      if (keyboardTapHandled) {
+        dispatchTrackpadMouse("mousedown", 0, 1);
+        dispatchTrackpadMouse("mouseup", 0, 0);
+        openKeyboard();
+      }
+      scheduleRemoteInputHint(trackpadPointer.x, trackpadPointer.y, true);
       const isDoubleTap = Date.now() - trackpadLastTapAt <= TRACKPAD_DOUBLE_TAP_MS;
       trackpadGesture = {
         kind: "single",
@@ -769,6 +863,7 @@
         lastY: touch.clientY,
         moved: false,
         isDoubleTap,
+        keyboardTapHandled,
       };
       if (isDoubleTap) {
         trackpadHoldTimer = setTimeout(() => {
@@ -788,6 +883,7 @@
         moved: false,
       };
     }
+    event.preventDefault();
   }
 
   function handleTrackpadTouchMove(event) {
@@ -827,7 +923,7 @@
     } else if (!cancelled && trackpadGesture.kind === "two" && !trackpadGesture.moved) {
       dispatchTrackpadMouse("mousedown", 2, 2);
       dispatchTrackpadMouse("mouseup", 2, 0);
-    } else if (!cancelled && trackpadGesture.kind === "single" && !trackpadGesture.moved) {
+    } else if (!cancelled && trackpadGesture.kind === "single" && !trackpadGesture.moved && !trackpadGesture.keyboardTapHandled) {
       dispatchTrackpadMouse("mousedown", 0, 1);
       dispatchTrackpadMouse("mouseup", 0, 0);
       trackpadLastTapAt = trackpadGesture.isDoubleTap ? 0 : Date.now();
@@ -881,6 +977,7 @@
       setGuideOpen(false);
     }
   });
+  keyboardInput.addEventListener("focus", () => keyboardButton.setAttribute("aria-expanded", "true"));
   keyboardInput.addEventListener("blur", () => keyboardButton.setAttribute("aria-expanded", "false"));
   keyboardInput.addEventListener("compositionstart", () => { composing = true; });
   keyboardInput.addEventListener("compositionend", () => {

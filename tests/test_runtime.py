@@ -20,6 +20,7 @@ class ScreenRuntimeTests(unittest.TestCase):
         self.assertEqual(spec.rfb_port, 5900)
         self.assertEqual(spec.web_port, 6081)
         self.assertEqual(spec.cdp_port, 9222)
+        self.assertEqual(spec.input_probe_port, 6091)
         self.assertEqual(spec.profile_dir, "/home/agent/chrome-profile-1")
 
     def test_screen_two_has_distinct_ports_and_runtime(self):
@@ -45,6 +46,8 @@ class ScreenRuntimeTests(unittest.TestCase):
         self.assertIn("location /screen/1/vendor/", text)
         self.assertIn("location = /screen/1/websockify", text)
         self.assertIn("proxy_pass http://127.0.0.1:6081/;", text)
+        self.assertIn("location = /screen/1/input-hit-test", text)
+        self.assertIn("proxy_pass http://127.0.0.1:6091/hit-test;", text)
         self.assertIn("location = /screen/2/websockify", text)
         self.assertIn("proxy_pass http://127.0.0.1:6082/;", text)
         self.assertIn("location = /screen/3/websockify", text)
@@ -68,6 +71,7 @@ class ScreenRuntimeTests(unittest.TestCase):
         self.assertIn("--remote-debugging-port=9224", command)
         self.assertIn("--user-data-dir=/home/agent/chrome-profile-3", command)
         self.assertIn("--class=agent-chrome", command)
+        self.assertIn("--force-renderer-accessibility", command)
         self.assertNotIn("--enable-automation", command)
 
     def test_all_screens_share_standalone_workspace(self):
@@ -108,6 +112,17 @@ class ScreenRuntimeTests(unittest.TestCase):
             env["BAMF_DESKTOP_FILE_HINT"],
             "/home/agent/.local/share/applications/agent-chrome.desktop",
         )
+
+    def test_accessibility_probe_supports_editable_hit_testing(self):
+        unit = (ROOT / "systemd/agent-screen-input-probe@.service").read_text()
+        probe = (ROOT / "bin/accessibility_probe.py").read_text()
+        self.assertIn("accessibility_probe.py %i", unit)
+        self.assertIn("EnvironmentFile=/tmp/agent-screen-runtime-%i/session.env", unit)
+        self.assertIn("getAccessibleAtPoint", probe)
+        self.assertIn("STATE_EDITABLE", probe)
+        self.assertIn('"text"', probe)
+        self.assertIn('"entry"', probe)
+        self.assertIn('127.0.0.1', probe)
 
     def test_session_environment_waits_for_desktop_readiness(self):
         from agent_screen.runtime import read_session_environment
@@ -262,6 +277,18 @@ class ScreenRuntimeTests(unittest.TestCase):
         self.assertIn('const KEYBOARD_SENTINEL = "\\u200b";', viewer)
         self.assertIn('function resetKeyboardInput()', viewer)
         self.assertIn('function sendRemoteBackspace()', viewer)
+        self.assertIn('const inputHitTestURL = `/screen/${screenNumber}/input-hit-test`;', viewer)
+        self.assertIn('function scheduleRemoteInputHint(clientX, clientY, immediate = false)', viewer)
+        self.assertIn('function maybeOpenKeyboardForRemoteTarget()', viewer)
+        self.assertIn('remoteInputHint.editable', viewer)
+        self.assertIn('scheduleRemoteInputHint(trackpadPointer.x, trackpadPointer.y)', viewer)
+        self.assertIn('function handleTrackpadTouchStart(event)', viewer)
+        self.assertIn('const keyboardTapHandled = remoteTargetIsEditable();', viewer)
+        self.assertIn('dispatchTrackpadMouse("mousedown", 0, 1);\n        dispatchTrackpadMouse("mouseup", 0, 0);\n        openKeyboard();', viewer)
+        self.assertIn('keyboardTapHandled,', viewer)
+        self.assertIn('!trackpadGesture.keyboardTapHandled', viewer)
+        self.assertIn('function handleDirectTouchHint(event)', viewer)
+        self.assertIn('maybeOpenKeyboardForRemoteTarget();\n    scheduleRemoteInputHint(touch.clientX, touch.clientY, true);', viewer)
         self.assertIn('event.inputType !== "deleteContentBackward"', viewer)
         self.assertIn('event.preventDefault();', viewer)
         self.assertNotIn('linear-gradient(145deg,#1e3a5f', viewer)

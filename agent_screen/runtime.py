@@ -10,6 +10,7 @@ class ScreenSpec:
     rfb_port: int
     web_port: int
     cdp_port: int
+    input_probe_port: int
     runtime_dir: str
     profile_dir: str
 
@@ -23,6 +24,7 @@ class ScreenSpec:
             rfb_port=5900 if screen_id == 1 else 5900 + screen_id,
             web_port=6080 + screen_id,
             cdp_port=9221 + screen_id,
+            input_probe_port=6090 + screen_id,
             runtime_dir=f"/tmp/agent-screen-runtime-{screen_id}",
             profile_dir=f"/home/agent/chrome-profile-{screen_id}",
         )
@@ -106,6 +108,15 @@ def render_nginx_locations(screen_ids: list[int]) -> str:
         alias /usr/share/novnc/vendor/;
     }}
 
+    location = /screen/{screen_id}/input-hit-test {{
+        proxy_pass http://127.0.0.1:{spec.input_probe_port}/hit-test;
+        proxy_pass_request_body off;
+        proxy_set_header Content-Length "";
+        proxy_connect_timeout 1s;
+        proxy_read_timeout 2s;
+        add_header Cache-Control "no-store" always;
+    }}
+
     location = /screen/{screen_id}/websockify {{
         proxy_pass http://127.0.0.1:{spec.web_port}/;
         proxy_http_version 1.1;
@@ -148,6 +159,7 @@ def chrome_command(spec: ScreenSpec) -> list[str]:
         "--hide-crash-restore-bubble",
         f"--user-data-dir={spec.profile_dir}",
         "--class=agent-chrome",
+        "--force-renderer-accessibility",
         "--enable-unsafe-swiftshader",
         f"--remote-debugging-port={spec.cdp_port}",
         "--remote-debugging-address=127.0.0.1",

@@ -1,0 +1,24 @@
+[Unit]
+Description=Agent Screen editable-input probe %i
+Requires=agent-screen@%i.service
+After=agent-screen@%i.service
+
+[Service]
+Type=simple
+User=agent
+Group=agent
+EnvironmentFile=/tmp/agent-screen-runtime-%i/session.env
+Environment=HOME=/home/agent
+Environment=USER=agent
+Environment=LOGNAME=agent
+ExecStart=/usr/bin/python3 /opt/agent-screen/bin/accessibility_probe.py %i
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+PrivateTmp=false
+ProtectSystem=strict
+ProtectHome=false
+ReadOnlyPaths=/opt/agent-screen
+
+[Install]
+WantedBy=multi-user.target
