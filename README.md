@@ -10,7 +10,7 @@ Each screen gets its own X11 display, desktop session, Chrome profile, VNC/WebSo
 - Separate Chrome profiles and CDP endpoints per screen
 - Minimal XFCE stack with `xfwm4`, Picom, Plank, Thunar, and XFCE Terminal
 - Responsive web launcher and clean noVNC viewer
-- Mobile keyboard plus one-tap device clipboard paste with a manual iOS fallback
+- Mobile native keyboard, bidirectional phone clipboard, direct-touch gestures, and relative trackpad mode with pointer recentering
 - Optional per-screen agent status cards backed by atomic, bounded JSON updates
 - Loopback-only VNC, Websockify, and CDP listeners
 - Nginx HTTPS routing with a VPN allowlist
