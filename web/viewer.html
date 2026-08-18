@@ -76,6 +76,9 @@
     #mobile-pointer-button[aria-pressed="true"]{background:#1e3a5fe8;border-color:#93c5fd55}
     #mobile-trackpad-surface{position:fixed;z-index:15;inset:0;background:transparent;touch-action:none;-webkit-user-select:none;user-select:none}
     #mobile-trackpad-surface[hidden]{display:none}
+    #mobile-trackpad-pointer{position:fixed;z-index:18;left:0;top:0;width:28px;height:28px;pointer-events:none;will-change:transform;filter:drop-shadow(0 2px 3px #000b)}
+    #mobile-trackpad-pointer[hidden]{display:none}
+    #mobile-trackpad-pointer svg{display:block;width:28px;height:28px;overflow:visible}
     #mobile-clipboard{position:fixed;z-index:22;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));display:none;font-family:system-ui,-apple-system,sans-serif}
     #mobile-clipboard-menu{position:absolute;left:0;bottom:58px;display:grid;min-width:224px;overflow:hidden;border:1px solid #ffffff24;border-radius:18px;background:#15171bf2;box-shadow:0 18px 46px #000b;backdrop-filter:blur(18px)}
     #mobile-clipboard-menu[hidden]{display:none}
@@ -156,6 +159,11 @@
     </button>
   </div>
   <div id="mobile-trackpad-surface" aria-label="Trackpad surface" hidden></div>
+  <div id="mobile-trackpad-pointer" aria-hidden="true" hidden>
+    <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M3 2.5 22.4 15l-8.1 1.5-4.2 7.1L3 2.5Z" fill="#f8fafc" stroke="#0f172a" stroke-width="2.2" stroke-linejoin="round"/>
+    </svg>
+  </div>
 
   <div id="mobile-clipboard">
     <div id="mobile-clipboard-menu" role="menu" aria-label="Phone clipboard" hidden>
@@ -206,6 +214,7 @@
   const trackpadModeToggle = document.getElementById("trackpad-mode-toggle");
   const recenterPointerButton = document.getElementById("recenter-pointer");
   const trackpadSurface = document.getElementById("mobile-trackpad-surface");
+  const pointerVisual = document.getElementById("mobile-trackpad-pointer");
   const clipboardButton = document.getElementById("mobile-clipboard-button");
   const clipboardMenu = document.getElementById("mobile-clipboard-menu");
   const pasteFromPhoneButton = document.getElementById("paste-from-phone");
@@ -395,6 +404,10 @@
     return canvas;
   }
 
+  function updateTrackpadPointerVisual() {
+    pointerVisual.style.transform = `translate3d(${Math.round(trackpadPointer.x - 3)}px,${Math.round(trackpadPointer.y - 3)}px,0)`;
+  }
+
   function trackpadCanvasPosition(canvas) {
     const rect = canvas.getBoundingClientRect();
     return {
@@ -414,6 +427,7 @@
       const mask = type === "mousedown" ? pressedMask : 0;
       rfb?._handleMouseButton(position.x, position.y, mask);
     }
+    updateTrackpadPointerVisual();
     rfb?._cursor?.move(trackpadPointer.x, trackpadPointer.y);
     return true;
   }
@@ -486,12 +500,14 @@
     }
     trackpadEnabled = enabled;
     trackpadSurface.hidden = !enabled;
+    pointerVisual.hidden = !enabled;
     trackpadModeToggle.setAttribute("aria-checked", String(enabled));
     pointerButton.setAttribute("aria-pressed", String(enabled));
     setPointerMenuOpen(false);
     if (enabled) {
       clampTrackpadPointer();
-      showMobileToast("Trackpad mode on");
+      dispatchTrackpadMouse("mousemove");
+      showMobileToast("Trackpad mode on · swipe anywhere");
     } else {
       showMobileToast("Direct touch mode");
     }
