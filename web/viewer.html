@@ -65,7 +65,22 @@
     #mobile-keyboard-panel[hidden]{display:none}
     #mobile-keyboard-input{width:min(56vw,280px);height:44px;border:1px solid #64748b;border-radius:10px;padding:0 12px;background:#f8fafc;color:#0f172a;font:500 16px/1 system-ui,-apple-system,sans-serif;outline:none}
     #mobile-keyboard-input:focus{border-color:#60a5fa;box-shadow:0 0 0 3px #3b82f633}
+    #mobile-clipboard{position:fixed;z-index:22;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));display:none;font-family:system-ui,-apple-system,sans-serif}
+    #mobile-clipboard-button{display:grid;width:52px;height:52px;place-items:center;border:1px solid #ffffff2c;border-radius:16px;background:#111827e8;color:#f8fafc;box-shadow:0 8px 24px #0008;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+    #mobile-clipboard-button svg{width:25px;height:25px}
+    #mobile-clipboard-button:active{transform:scale(.96)}
+    #mobile-clipboard-fallback{position:fixed;z-index:35;left:12px;right:12px;bottom:max(78px,calc(env(safe-area-inset-bottom) + 70px));display:grid;gap:10px;padding:14px;border:1px solid #ffffff2c;border-radius:16px;background:#0f172af5;color:#f8fafc;box-shadow:0 18px 46px #000c;backdrop-filter:blur(15px)}
+    #mobile-clipboard-fallback[hidden]{display:none}
+    #mobile-clipboard-fallback label{font-size:13px;font-weight:750}
+    #mobile-clipboard-input{width:100%;min-height:88px;resize:none;border:1px solid #64748b;border-radius:11px;padding:11px;background:#f8fafc;color:#0f172a;font:500 16px/1.35 system-ui,-apple-system,sans-serif;outline:none}
+    #mobile-clipboard-input:focus{border-color:#60a5fa;box-shadow:0 0 0 3px #3b82f633}
+    #mobile-clipboard-actions{display:flex;justify-content:flex-end;gap:8px}
+    #mobile-clipboard-actions button{min-height:42px;border:1px solid #ffffff2c;border-radius:11px;padding:0 15px;background:#1e293b;color:#f8fafc;font-weight:700}
+    #mobile-clipboard-submit{background:#2563eb!important}
+    #mobile-action-toast{position:fixed;z-index:40;left:50%;bottom:max(78px,calc(env(safe-area-inset-bottom) + 70px));max-width:calc(100vw - 32px);transform:translateX(-50%);padding:9px 13px;border:1px solid #ffffff24;border-radius:999px;background:#0f172af2;color:#f8fafc;box-shadow:0 10px 28px #000a;font:700 12px/1.2 system-ui,-apple-system,sans-serif;white-space:nowrap}
+    #mobile-action-toast[hidden]{display:none}
     @media (pointer:fine) and (min-width:900px){#agent-command-header,#mobile-keyboard{opacity:.82}#agent-command-header:hover,#agent-command-header:focus-within,#mobile-keyboard:hover,#mobile-keyboard:focus-within{opacity:1}}
+    @media (max-width:720px){#mobile-clipboard{display:block}}
     @media (max-width:480px){#agent-command-header{left:8px;right:8px;width:auto;transform:none}#agent-header-toggle{background:transparent!important;box-shadow:none;-webkit-tap-highlight-color:transparent}#agent-command-header[data-collapsed="true"]{left:50%;right:auto;width:min(340px,calc(100vw - 32px));transform:translateX(-50%)}#agent-command-header[data-collapsed="true"] #agent-status{column-gap:12px;padding:11px 52px 11px 15px}#agent-command-header[data-collapsed="true"] #agent-status-state{align-self:center}#agent-command-header[data-collapsed="true"] #agent-header-toggle{right:4px;top:50%;bottom:auto;width:40px;height:40px;background:transparent!important;box-shadow:none;-webkit-tap-highlight-color:transparent;transform:translateY(-50%) rotate(180deg)}#screen-switcher a{min-height:48px;padding:6px 10px}#agent-status{padding:11px 12px 13px}#agent-status-role{display:block;margin:3px 0 0}}
     @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
   </style>
@@ -116,6 +131,21 @@
     <button id="mobile-keyboard-button" type="button" aria-label="Open mobile keyboard" aria-expanded="false">⌨</button>
   </div>
 
+  <div id="mobile-clipboard">
+    <button id="mobile-clipboard-button" type="button" aria-label="Paste clipboard to remote screen" aria-haspopup="dialog">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="5" width="12" height="16" rx="2"/><path d="M9 5.5V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v1.5M9 10h6M9 14h6M9 18h4"/></svg>
+    </button>
+    <div id="mobile-clipboard-fallback" role="dialog" aria-modal="true" aria-labelledby="mobile-clipboard-title" hidden>
+      <label id="mobile-clipboard-title" for="mobile-clipboard-input">Paste from your phone</label>
+      <textarea id="mobile-clipboard-input" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Tap and hold here, then Paste"></textarea>
+      <div id="mobile-clipboard-actions">
+        <button id="mobile-clipboard-cancel" type="button">Cancel</button>
+        <button id="mobile-clipboard-submit" type="button">Paste to screen</button>
+      </div>
+    </div>
+  </div>
+  <div id="mobile-action-toast" role="status" aria-live="polite" hidden></div>
+
 <script type="module">
   import RFB from "./core/rfb.js";
 
@@ -139,6 +169,12 @@
   const keyboardPanel = document.getElementById("mobile-keyboard-panel");
   const keyboardInput = document.getElementById("mobile-keyboard-input");
   const keyboardDone = document.getElementById("mobile-keyboard-done");
+  const clipboardButton = document.getElementById("mobile-clipboard-button");
+  const clipboardFallback = document.getElementById("mobile-clipboard-fallback");
+  const clipboardInput = document.getElementById("mobile-clipboard-input");
+  const clipboardCancel = document.getElementById("mobile-clipboard-cancel");
+  const clipboardSubmit = document.getElementById("mobile-clipboard-submit");
+  const mobileActionToast = document.getElementById("mobile-action-toast");
   const agentStatusName = document.getElementById("agent-status-name");
   const agentStatusRole = document.getElementById("agent-status-role");
   const agentStatusState = document.getElementById("agent-status-state");
@@ -155,6 +191,7 @@
   let rfb = null;
   let reconnectTimer = null;
   let collapseTimer = null;
+  let toastTimer = null;
   let composing = false;
   let statusUpdatedAt = "";
 
@@ -240,6 +277,61 @@
     }
   }
 
+  function showMobileToast(message) {
+    clearTimeout(toastTimer);
+    mobileActionToast.textContent = message;
+    mobileActionToast.hidden = false;
+    toastTimer = setTimeout(() => { mobileActionToast.hidden = true; }, 1800);
+  }
+
+  function sendRemotePasteShortcut() {
+    if (!rfb) return;
+    rfb.sendKey(0xffe3, "ControlLeft", true);
+    rfb.sendKey(0x0076, "KeyV", true);
+    rfb.sendKey(0x0076, "KeyV", false);
+    rfb.sendKey(0xffe3, "ControlLeft", false);
+  }
+
+  function pasteTextToRemote(text) {
+    if (!rfb || !text) return false;
+    rfb.clipboardPasteFrom(text);
+    setTimeout(() => sendRemotePasteShortcut(), 60);
+    return true;
+  }
+
+  function openClipboardFallback() {
+    clipboardFallback.hidden = false;
+    clipboardInput.focus({ preventScroll: true });
+  }
+
+  function closeClipboardFallback() {
+    clipboardInput.value = "";
+    clipboardFallback.hidden = true;
+    rfb?.focus({ preventScroll: true });
+  }
+
+  async function pasteDeviceClipboard() {
+    if (!rfb) {
+      showMobileToast("Screen is reconnecting");
+      return;
+    }
+    if (!navigator.clipboard?.readText) {
+      openClipboardFallback();
+      return;
+    }
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text) {
+        showMobileToast("Clipboard is empty");
+        return;
+      }
+      pasteTextToRemote(text);
+      showMobileToast("Pasted to screen");
+    } catch (_error) {
+      openClipboardFallback();
+    }
+  }
+
   function openKeyboard() {
     keyboardPanel.hidden = false;
     keyboardButton.setAttribute("aria-expanded", "true");
@@ -262,6 +354,19 @@
     if (keyboardPanel.hidden) openKeyboard(); else closeKeyboard();
   });
   keyboardDone.addEventListener("click", closeKeyboard);
+  clipboardButton.addEventListener("click", pasteDeviceClipboard);
+  clipboardCancel.addEventListener("click", closeClipboardFallback);
+  clipboardSubmit.addEventListener("click", () => {
+    if (!clipboardInput.value) {
+      showMobileToast("Paste some text first");
+      return;
+    }
+    if (pasteTextToRemote(clipboardInput.value)) showMobileToast("Pasted to screen");
+    closeClipboardFallback();
+  });
+  clipboardInput.addEventListener("keydown", event => {
+    if (event.key === "Escape") closeClipboardFallback();
+  });
   keyboardInput.addEventListener("compositionstart", () => { composing = true; });
   keyboardInput.addEventListener("compositionend", () => {
     composing = false;
