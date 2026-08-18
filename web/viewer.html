@@ -272,6 +272,7 @@
     rfb.scaleViewport = true;
     rfb.resizeSession = false;
     rfb.showDotCursor = true;
+    installDirectTouchGestureGuard();
     rfb.addEventListener("connect", () => setConnectionState("live"), { once: true });
     rfb.addEventListener("clipboard", event => {
       remoteClipboardText = event.detail.text || "";
@@ -390,6 +391,30 @@
 
   function remoteCanvas() {
     return document.querySelector("canvas");
+  }
+
+  function handleDirectDragGesture(event) {
+    if (trackpadEnabled || event.detail?.type !== "drag") return;
+    event.stopImmediatePropagation();
+    event.preventDefault();
+    const canvas = remoteCanvas();
+    if (!canvas || !rfb) return;
+    const rect = canvas.getBoundingClientRect();
+    trackpadPointer = {
+      x: Math.min(rect.right - 1, Math.max(rect.left + 1, event.detail.clientX)),
+      y: Math.min(rect.bottom - 1, Math.max(rect.top + 1, event.detail.clientY)),
+    };
+    const position = trackpadCanvasPosition(canvas);
+    rfb?._handleMouseMove(position.x, position.y);
+    rfb?._cursor?.move(trackpadPointer.x, trackpadPointer.y);
+  }
+
+  function installDirectTouchGestureGuard() {
+    const canvas = remoteCanvas();
+    if (!canvas) return;
+    for (const eventName of ["gesturestart", "gesturemove", "gestureend"]) {
+      canvas.addEventListener(eventName, handleDirectDragGesture, { capture: true });
+    }
   }
 
   function clampTrackpadPointer() {
