@@ -395,18 +395,25 @@
     return canvas;
   }
 
+  function trackpadCanvasPosition(canvas) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: trackpadPointer.x - rect.left,
+      y: trackpadPointer.y - rect.top,
+    };
+  }
+
   function dispatchTrackpadMouse(type, button = 0, buttons = 0) {
     const canvas = clampTrackpadPointer();
-    if (!canvas) return false;
-    canvas.dispatchEvent(new MouseEvent(type, {
-      bubbles: true,
-      cancelable: true,
-      view: window,
-      clientX: trackpadPointer.x,
-      clientY: trackpadPointer.y,
-      button,
-      buttons,
-    }));
+    if (!canvas || !rfb) return false;
+    const position = trackpadCanvasPosition(canvas);
+    if (type === "mousemove") {
+      rfb?._handleMouseMove(position.x, position.y);
+    } else {
+      const pressedMask = button === 2 ? 4 : button === 1 ? 2 : 1;
+      const mask = type === "mousedown" ? pressedMask : 0;
+      rfb?._handleMouseButton(position.x, position.y, mask);
+    }
     rfb?._cursor?.move(trackpadPointer.x, trackpadPointer.y);
     return true;
   }
@@ -440,16 +447,17 @@
 
   function dispatchTrackpadWheel(deltaX, deltaY) {
     const canvas = clampTrackpadPointer();
-    if (!canvas) return;
-    canvas.dispatchEvent(new WheelEvent("wheel", {
-      bubbles: true,
-      cancelable: true,
+    if (!canvas || !rfb) return;
+    rfb?._handleWheel({
+      stopPropagation() {},
+      preventDefault() {},
       clientX: trackpadPointer.x,
       clientY: trackpadPointer.y,
+      buttons: 0,
       deltaX,
       deltaY,
       deltaMode: 0,
-    }));
+    });
   }
 
   function recenterTrackpadPointer() {
