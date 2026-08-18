@@ -60,17 +60,17 @@
     @keyframes status-pulse{0%{box-shadow:0 0 0 0 #3b82f677}70%{box-shadow:0 0 0 7px #3b82f600}100%{box-shadow:0 0 0 0 #3b82f600}}
     #mobile-keyboard{position:fixed;z-index:20;right:max(12px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));display:flex;align-items:center;gap:8px;font:600 14px/1 system-ui,-apple-system,sans-serif}
     #mobile-keyboard button{min-height:44px;border:1px solid #ffffff2c;border-radius:12px;padding:0 14px;background:#111827e8;color:#f8fafc;box-shadow:0 8px 24px #0008;touch-action:manipulation}
-    #mobile-keyboard-button{min-width:48px;padding:0 12px;font-size:18px}
+    #mobile-keyboard-button,#mobile-clipboard-button{width:48px;height:44px;min-width:48px;min-height:44px;border:1px solid #ffffff2c;border-radius:12px;padding:0;background:#111827e8;color:#f8fafc;box-shadow:0 8px 24px #0008;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+    #mobile-keyboard-button{font-size:18px}
     #mobile-keyboard-panel{display:flex;align-items:center;gap:8px;padding:8px;border:1px solid #ffffff2c;border-radius:14px;background:#0f172aef;box-shadow:0 10px 30px #0009}
     #mobile-keyboard-panel[hidden]{display:none}
     #mobile-keyboard-input{width:min(56vw,280px);height:44px;border:1px solid #64748b;border-radius:10px;padding:0 12px;background:#f8fafc;color:#0f172a;font:500 16px/1 system-ui,-apple-system,sans-serif;outline:none}
     #mobile-keyboard-input:focus{border-color:#60a5fa;box-shadow:0 0 0 3px #3b82f633}
     #mobile-clipboard{position:fixed;z-index:22;left:max(12px,env(safe-area-inset-left));bottom:max(12px,env(safe-area-inset-bottom));display:none;font-family:system-ui,-apple-system,sans-serif}
-    #mobile-clipboard-button{display:grid;width:50px;height:50px;place-items:center;border:1px solid #93c5fd45;border-radius:15px;background:linear-gradient(145deg,#1e3a5fe8,#111b31f2);color:#dbeafe;box-shadow:inset 0 1px 0 #ffffff18,0 8px 24px #0009,0 0 0 1px #2563eb12;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:transform .12s,background .15s,border-color .15s}
-    #mobile-clipboard-button svg{width:27px;height:27px;filter:drop-shadow(0 2px 4px #0007)}
-    #mobile-clipboard-button .clipboard-paste-arrow{color:#60a5fa;stroke-width:2.35}
-    #mobile-clipboard-button:hover,#mobile-clipboard-button:focus-visible{border-color:#93c5fd80;background:linear-gradient(145deg,#244d7bf2,#14213cf5);outline:none}
-    #mobile-clipboard-button:active{transform:scale(.94)}
+    #mobile-clipboard-button{display:grid;place-items:center}
+    #mobile-clipboard-button svg{width:20px;height:20px}
+    #mobile-keyboard-button:hover,#mobile-keyboard-button:focus-visible,#mobile-clipboard-button:hover,#mobile-clipboard-button:focus-visible{background:#1e293be8;color:#fff;outline:none}
+    #mobile-keyboard-button:active,#mobile-clipboard-button:active{transform:scale(.96)}
     #mobile-clipboard-fallback{position:fixed;z-index:35;left:12px;right:12px;bottom:max(78px,calc(env(safe-area-inset-bottom) + 70px));display:grid;gap:10px;padding:14px;border:1px solid #ffffff2c;border-radius:16px;background:#0f172af5;color:#f8fafc;box-shadow:0 18px 46px #000c;backdrop-filter:blur(15px)}
     #mobile-clipboard-fallback[hidden]{display:none}
     #mobile-clipboard-fallback label{font-size:13px;font-weight:750}
