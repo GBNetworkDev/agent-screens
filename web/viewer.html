@@ -193,6 +193,8 @@
     offline: "Offline",
   };
   const KEYBOARD_SENTINEL = "\u200b";
+  const REMOTE_CLIPBOARD_TIMEOUT_MS = 2500;
+  const remoteClipboardWaiters = new Set();
   let rfb = null;
   let reconnectTimer = null;
   let collapseTimer = null;
@@ -219,6 +221,7 @@
     rfb.addEventListener("connect", () => setConnectionState("live"), { once: true });
     rfb.addEventListener("clipboard", event => {
       remoteClipboardText = event.detail.text || "";
+      for (const waiter of [...remoteClipboardWaiters]) waiter(remoteClipboardText);
     });
     rfb.addEventListener("disconnect", () => {
       rfb = null;
@@ -349,29 +352,54 @@
     }
   }
 
+  function waitForRemoteClipboardText() {
+    return new Promise((resolve, reject) => {
+      let timer = null;
+      const waiter = text => {
+        if (!remoteClipboardWaiters.delete(waiter)) return;
+        clearTimeout(timer);
+        if (text) resolve(text); else reject(new Error("remote-clipboard-empty"));
+      };
+      remoteClipboardWaiters.add(waiter);
+      timer = setTimeout(() => {
+        remoteClipboardWaiters.delete(waiter);
+        reject(new Error("remote-clipboard-timeout"));
+      }, REMOTE_CLIPBOARD_TIMEOUT_MS);
+    });
+  }
+
   async function copyRemoteClipboardToPhone() {
     setClipboardMenuOpen(false);
     if (!rfb) {
       showMobileToast("Screen is reconnecting");
       return;
     }
-    remoteClipboardText = "";
-    sendRemoteCopyShortcut();
-    await new Promise(resolve => setTimeout(resolve, 180));
-    const text = remoteClipboardText;
-    if (!text) {
-      showMobileToast("Select text on screen first");
-      return;
-    }
-    if (!navigator.clipboard?.writeText) {
-      showMobileToast("Phone clipboard unavailable");
-      return;
-    }
+    const textPromise = waitForRemoteClipboardText();
+    showMobileToast("Copying remote selection…");
     try {
-      await navigator.clipboard.writeText(text);
+      if (navigator.clipboard?.write && typeof ClipboardItem === "function") {
+        const clipboardItem = new ClipboardItem({
+          "text/plain": textPromise.then(text => new Blob([text], { type: "text/plain" })),
+        });
+        const writePromise = navigator.clipboard.write([clipboardItem]);
+        sendRemoteCopyShortcut();
+        await writePromise;
+      } else if (navigator.clipboard?.writeText) {
+        sendRemoteCopyShortcut();
+        const text = await textPromise;
+        await navigator.clipboard.writeText(text);
+      } else {
+        remoteClipboardWaiters.clear();
+        showMobileToast("Phone clipboard unavailable");
+        return;
+      }
       showMobileToast("Copied to phone");
-    } catch (_error) {
-      showMobileToast("Allow clipboard access and retry");
+    } catch (error) {
+      if (error?.message?.startsWith("remote-clipboard-")) {
+        showMobileToast("Remote clipboard did not update");
+      } else {
+        showMobileToast("Allow clipboard access and retry");
+      }
     }
   }
 
