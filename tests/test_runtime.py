@@ -244,6 +244,8 @@ class ScreenRuntimeTests(unittest.TestCase):
         self.assertIn('id="mobile-keyboard-button"', viewer)
         self.assertIn('id="mobile-keyboard-input"', viewer)
         self.assertIn('id="mobile-clipboard-button"', viewer)
+        self.assertIn('data-icon="clipboard-paste"', viewer)
+        self.assertIn('class="clipboard-paste-arrow"', viewer)
         self.assertIn('aria-label="Paste clipboard to remote screen"', viewer)
         self.assertIn('id="mobile-clipboard-fallback"', viewer)
         self.assertIn('id="mobile-clipboard-input"', viewer)
