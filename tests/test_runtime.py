@@ -188,6 +188,11 @@ class ScreenRuntimeTests(unittest.TestCase):
         self.assertIn("session.env", launcher)
         self.assertIn('cua-driver-screen2.sock', launcher)
         self.assertIn('cua-driver.sock', launcher)
+        self.assertIn('XDG_STATE_HOME="/home/agent/.local/state/agent-screen-${screen_id}"', launcher)
+        self.assertIn('XDG_DATA_HOME="/home/agent/.local/share/agent-screen-${screen_id}"', launcher)
+        self.assertIn('gnome-keyring-daemon --unlock --components=secrets', launcher)
+        self.assertIn('org.freedesktop.secrets', launcher)
+        self.assertIn('--experimental-history', launcher)
         self.assertNotIn("0.0.0.0", launcher + service)
 
     def test_screen_three_and_four_cua_use_isolated_template_sockets(self):

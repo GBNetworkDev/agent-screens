@@ -48,7 +48,7 @@ A Debian-based Linux host with:
 - Python 3.11+
 - Xvfb and X11 utilities
 - `x11vnc`, noVNC, and Websockify
-- `xfwm4`, Picom, Plank, Thunar, XFCE Terminal, D-Bus, and `python3-pyatspi`
+- `xfwm4`, Picom, Plank, Thunar, XFCE Terminal, D-Bus, `python3-pyatspi`, and `gnome-keyring`
 - Google Chrome
 - Nginx and a valid TLS certificate
 - An unprivileged `agent` user
@@ -68,6 +68,9 @@ A Debian-based Linux host with:
 8. Reload systemd and start the screens:
 
 ```bash
+sudo install -d -o agent -g agent -m 0700 /home/agent/.config/agent-screen
+sudo sh -c 'umask 077; openssl rand -hex 32 > /home/agent/.config/agent-screen/history-keyring-password'
+sudo chown agent:agent /home/agent/.config/agent-screen/history-keyring-password
 sudo install -o root -g root -m 0755 bin/start_cua_screen.sh /usr/local/libexec/start-cua-screen
 sudo systemctl daemon-reload
 sudo systemctl enable --now agent-screen@1 agent-screen@2 agent-screen@3 agent-screen@4
@@ -77,7 +80,7 @@ sudo systemctl enable --now agent-screen-cua-screen2.service  # optional
 sudo systemctl enable --now agent-screen-cua@3.service agent-screen-cua@4.service  # optional
 ```
 
-Each CUA unit uses an isolated socket. Screen 1 retains `cua-driver.sock`; Screens 2–4 use `cua-driver-screen2.sock` through `cua-driver-screen4.sock`.
+Each CUA unit uses an isolated socket. Screen 1 retains `cua-driver.sock`; Screens 2–4 use `cua-driver-screen2.sock` through `cua-driver-screen4.sock`. The launcher admits the nightly encrypted Computer History preview, starts an unlocked per-screen Secret Service, and isolates each screen's history and keyring under its own `XDG_STATE_HOME` and `XDG_DATA_HOME`. After first startup, enable capture against each socket with `cua-driver history --socket <socket> enable --json`. The credential file is local runtime state and must never be committed.
 
 To connect Hermes to all four sockets through native MCP tools without exposing backend listeners, follow the sanitized guide in [`integrations/hermes/README.md`](integrations/hermes/README.md). All real SSH hostnames, ports, identity paths, and credentials stay in the operator environment and must not be committed.
 
