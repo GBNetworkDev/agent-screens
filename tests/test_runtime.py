@@ -176,6 +176,36 @@ class ScreenRuntimeTests(unittest.TestCase):
         desktop = (ROOT / "desktop/agent-files.desktop").read_text()
         self.assertIn("Name=Thunar File Manager", desktop)
         self.assertNotIn("Name=Files\n", desktop)
+    def test_screen_one_cua_history_pilot_uses_bounded_manifest(self):
+        import yaml
+
+        launcher = (ROOT / "bin/start_cua_screen.sh").read_text()
+        manifest_path = ROOT / "config/cua/screen1-history-pilot.yaml"
+        dropin_path = ROOT / "systemd/agent-screen-cua-history-pilot.conf"
+        self.assertTrue(manifest_path.exists())
+        self.assertTrue(dropin_path.exists())
+        manifest = yaml.safe_load(manifest_path.read_text())
+        dropin = dropin_path.read_text()
+
+        self.assertEqual(manifest["version"], 3)
+        self.assertEqual(manifest["expires_after"], "24h")
+        self.assertEqual(manifest["idle_timeout"], "24h")
+        self.assertEqual(
+            set(manifest["resources"]["computer_history"]["operations"]),
+            {"status", "query"},
+        )
+        self.assertTrue(manifest["resources"]["desktop"]["display"])
+        self.assertIn("history_status", manifest["allow"]["tools"])
+        self.assertIn("history_query", manifest["allow"]["tools"])
+        self.assertIn("get_desktop_state", manifest["allow"]["tools"])
+        self.assertIn("click", manifest["allow"]["tools"])
+        self.assertIn("type_text", manifest["allow"]["tools"])
+        self.assertIn("--permission-mode bounded", launcher)
+        self.assertIn("--capability-manifest /etc/agent-screen/cua-screen-1-capabilities.yaml", launcher)
+        self.assertIn("--approve-capability-manifest", launcher)
+        self.assertIn("RuntimeMaxSec=23h", dropin)
+        self.assertIn("Restart=always", dropin)
+
     def test_screen_two_cua_service_is_persistent_and_isolated(self):
         service = (ROOT / "systemd/agent-screen-cua-screen2.service").read_text()
         launcher = (ROOT / "bin/start_cua_screen.sh").read_text()

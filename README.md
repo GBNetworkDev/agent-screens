@@ -72,6 +72,9 @@ sudo install -d -o agent -g agent -m 0700 /home/agent/.config/agent-screen
 sudo sh -c 'umask 077; openssl rand -hex 32 > /home/agent/.config/agent-screen/history-keyring-password'
 sudo chown agent:agent /home/agent/.config/agent-screen/history-keyring-password
 sudo install -o root -g root -m 0755 bin/start_cua_screen.sh /usr/local/libexec/start-cua-screen
+sudo install -d -o root -g root -m 0755 /etc/agent-screen /etc/systemd/system/agent-screen-cua.service.d
+sudo install -o root -g root -m 0644 config/cua/screen1-history-pilot.yaml /etc/agent-screen/cua-screen-1-capabilities.yaml
+sudo install -o root -g root -m 0644 systemd/agent-screen-cua-history-pilot.conf /etc/systemd/system/agent-screen-cua.service.d/history-pilot.conf
 sudo systemctl daemon-reload
 sudo systemctl enable --now agent-screen@1 agent-screen@2 agent-screen@3 agent-screen@4
 sudo systemctl enable --now agent-screen-input-probe@1 agent-screen-input-probe@2 agent-screen-input-probe@3 agent-screen-input-probe@4
@@ -81,6 +84,8 @@ sudo systemctl enable --now agent-screen-cua@3.service agent-screen-cua@4.servic
 ```
 
 Each CUA unit uses an isolated socket. Screen 1 retains `cua-driver.sock`; Screens 2–4 use `cua-driver-screen2.sock` through `cua-driver-screen4.sock`. The launcher admits the nightly encrypted Computer History preview, starts an unlocked per-screen Secret Service, and isolates each screen's history and keyring under its own `XDG_STATE_HOME` and `XDG_DATA_HOME`. After first startup, enable capture against each socket with `cua-driver history --socket <socket> enable --json`. The credential file is local runtime state and must never be committed.
+
+Screen 1 is the bounded Computer History MCP pilot. Install `config/cua/screen1-history-pilot.yaml` as `/etc/agent-screen/cua-screen-1-capabilities.yaml` and `systemd/agent-screen-cua-history-pilot.conf` as `/etc/systemd/system/agent-screen-cua.service.d/history-pilot.conf`. The reviewed manifest explicitly authorizes `history_status` and `history_query` plus the existing native desktop tool surface. Its maximum Cua lifetime is 24 hours; the S1 drop-in restarts the daemon after 23 hours so the approved launch-time lease renews before expiry. Screens 2–4 remain in standard permission mode. Typed existing-profile browser inspection remains a separate Cua authorization boundary and is not implied by this pilot.
 
 To connect Hermes to all four sockets through native MCP tools without exposing backend listeners, follow the sanitized guide in [`integrations/hermes/README.md`](integrations/hermes/README.md). All real SSH hostnames, ports, identity paths, and credentials stay in the operator environment and must not be committed.
 

@@ -72,7 +72,16 @@ case "$screen_id" in
   4) socket=/home/agent/.cache/cua-driver/cua-driver-screen4.sock ;;
 esac
 
+permission_args=(--permission-mode standard)
+if [[ "$screen_id" == "1" ]]; then
+  permission_args=(
+    --permission-mode bounded
+    --capability-manifest /etc/agent-screen/cua-screen-1-capabilities.yaml
+    --approve-capability-manifest
+  )
+fi
+
 exec /home/agent/.local/bin/cua-driver serve \
   --socket "$socket" \
-  --permission-mode standard \
+  "${permission_args[@]}" \
   --experimental-history
