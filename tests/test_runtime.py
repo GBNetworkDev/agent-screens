@@ -280,6 +280,7 @@ class ScreenRuntimeTests(unittest.TestCase):
         self.assertIn('data-guide-icon="trackpad"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 3 14 9-7 1-4 7z"/></svg>', viewer)
         self.assertIn('function sendRemoteBackspace()', viewer)
         self.assertIn('const inputHitTestURL = `/screen/${screenNumber}/input-hit-test`;', viewer)
+        self.assertIn('const INPUT_HINT_DELAY_MS = 24;', viewer)
         self.assertIn('function scheduleRemoteInputHint(clientX, clientY, immediate = false)', viewer)
         self.assertIn('function maybeOpenKeyboardForRemoteTarget()', viewer)
         self.assertIn('remoteInputHint.editable', viewer)

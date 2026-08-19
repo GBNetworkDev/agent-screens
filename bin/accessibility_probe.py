@@ -39,44 +39,81 @@ def _point_area(accessible, x, y):
     return None
 
 
-def _contains_point(accessible, x, y):
-    return _point_area(accessible, x, y) is not None
+def _is_active(accessible):
+    try:
+        return accessible.getState().contains(pyatspi.STATE_ACTIVE)
+    except Exception:
+        return False
 
 
-def _deepest_containing(accessible, x, y, depth=0):
-    if depth > 32:
+def _top_level_candidates(desktop, x, y):
+    """Return point-containing application windows, active window first."""
+    candidates = []
+    for application in _children(desktop):
+        for window in _children(application):
+            area = _point_area(window, x, y)
+            if area is not None:
+                candidates.append((not _is_active(window), area, window))
+    candidates.sort(key=lambda item: (item[0], item[1]))
+    return [item[2] for item in candidates]
+
+
+def _editable_at_point(window, x, y):
+    """Use AT-SPI's server-side collection query to avoid a full tree walk."""
+    try:
+        collection = window.queryCollection()
+        rule = collection.createMatchRule(
+            pyatspi.StateSet(pyatspi.STATE_EDITABLE),
+            collection.MATCH_ANY,
+            [],
+            collection.MATCH_NONE,
+            [],
+            collection.MATCH_NONE,
+            [],
+            collection.MATCH_NONE,
+            False,
+        )
+        matches = collection.getMatches(
+            rule, collection.SORT_ORDER_CANONICAL, 0, True
+        )
+    except Exception:
         return None
-    best = accessible if _contains_point(accessible, x, y) else None
-    best_area = _point_area(best, x, y) if best is not None else None
-    for child in _children(accessible):
-        candidate = _deepest_containing(child, x, y, depth + 1)
-        if candidate is None:
-            continue
-        candidate_area = _point_area(candidate, x, y)
-        if best is None or best_area is None or (
-            candidate_area is not None and candidate_area <= best_area
-        ):
-            best = candidate
-            best_area = candidate_area
-    return best
+    containing = []
+    for accessible in matches:
+        area = _point_area(accessible, x, y)
+        if area is not None:
+            containing.append((area, accessible))
+    return min(containing, key=lambda item: item[0])[1] if containing else None
 
 
-def get_accessible_at_point(desktop, x, y):
-    """Return the deepest visible accessible at desktop coordinates."""
-    accessible = _deepest_containing(desktop, x, y)
-    if accessible is None or accessible == desktop:
-        return None
-    for _depth in range(16):
+def _deepest_at_point(accessible, x, y):
+    """Descend through the component API without walking the whole tree."""
+    current = accessible
+    descended = False
+    for _depth in range(32):
         try:
-            candidate = accessible.queryComponent().getAccessibleAtPoint(
+            candidate = current.queryComponent().getAccessibleAtPoint(
                 x, y, pyatspi.DESKTOP_COORDS
             )
         except Exception:
             break
-        if candidate is None or candidate == accessible:
+        if candidate is None or candidate == current:
             break
-        accessible = candidate
-    return accessible
+        current = candidate
+        descended = True
+    return current if descended else None
+
+
+def get_accessible_at_point(desktop, x, y):
+    """Return the deepest accessible in the active point-containing window."""
+    for window in _top_level_candidates(desktop, x, y):
+        editable = _editable_at_point(window, x, y)
+        if editable is not None:
+            return editable
+        accessible = _deepest_at_point(window, x, y)
+        if accessible is not None:
+            return accessible
+    return None
 
 
 def editable_details(accessible):
