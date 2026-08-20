@@ -26,8 +26,8 @@ _SPECIALISTS = {
             "AGENT_SCREEN_STATUS_PUBLISHER_3", "atlas-screen-status"
         ),
         "tool_prefix": "mcp__cua_screen3__",
-        "working": "Working in GBAsset workspace",
-        "idle": "Ready for GBAsset work",
+        "working": "Designing systems workflow",
+        "idle": "Ready for strategy work",
     },
     4: {
         "publisher": os.environ.get(

@@ -145,6 +145,25 @@
       color: #8ddbb0;
       font-size: 13px;
       font-weight: 650;
+      transition: color .2s ease;
+    }
+
+    .card[data-state="working"] .status { color: #82b7ff; }
+    .card[data-state="working"] .dot {
+      background: #60a5fa;
+      box-shadow: 0 0 0 4px rgba(96, 165, 250, .13), 0 0 18px rgba(96, 165, 250, .45);
+      animation: statusPulse 1.6s ease-in-out infinite;
+    }
+    .card[data-state="waiting_approval"] .status { color: #f5c968; }
+    .card[data-state="waiting_approval"] .dot { background: #f5b942; box-shadow: 0 0 0 4px rgba(245, 185, 66, .13); }
+    .card[data-state="error"] .status { color: #ff8f98; }
+    .card[data-state="error"] .dot { background: #fb7185; box-shadow: 0 0 0 4px rgba(251, 113, 133, .13); }
+    .card[data-state="offline"] .status { color: #7f8ba0; }
+    .card[data-state="offline"] .dot { background: #667085; box-shadow: 0 0 0 4px rgba(102, 112, 133, .10); }
+
+    @keyframes statusPulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(.72); opacity: .62; }
     }
 
     .name {
@@ -158,6 +177,14 @@
     .meta {
       color: #8f9fb8;
       font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .activity {
+      min-height: 21px;
+      margin-top: 10px;
+      color: #b8c5d8;
+      font-size: 13px;
       line-height: 1.55;
     }
 
@@ -210,6 +237,7 @@
 
     @media (prefers-reduced-motion: reduce) {
       .card, .arrow { transition: none; }
+      .card[data-state="working"] .dot { animation: none; }
     }
   </style>
 </head>
@@ -218,60 +246,123 @@
     <header class="hero">
       <h1>Agent Screens</h1>
       <p class="sub">Choose a desktop to continue.</p>
-      <div class="summary"><span class="summary-dot"></span>4 screens available</div>
+      <div class="summary" id="team-summary" aria-live="polite"><span class="summary-dot"></span><span>4 screens available</span></div>
     </header>
 
     <section class="grid" aria-label="Available desktops">
-      <a class="card" href="/screen/1/" aria-label="Open Iris desktop">
+      <a class="card" href="/screen/1/" aria-label="Open Iris desktop" data-screen="1" data-agent="Iris" data-state="offline">
         <div class="card-top">
           <div class="screen-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
           </div>
-          <div class="status"><span class="dot"></span>Online</div>
+          <div class="status"><span class="dot"></span><span class="status-label">Offline</span></div>
         </div>
         <div class="name">Iris</div>
         <div class="meta">Chief of Staff · Screen 1</div>
+        <div class="activity" aria-live="polite">Checking status…</div>
         <span class="open">Open desktop <span class="arrow">→</span></span>
       </a>
 
-      <a class="card" href="/screen/2/" aria-label="Open Tara desktop">
+      <a class="card" href="/screen/2/" aria-label="Open Tara desktop" data-screen="2" data-agent="Tara" data-state="offline">
         <div class="card-top">
           <div class="screen-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
           </div>
-          <div class="status"><span class="dot"></span>Online</div>
+          <div class="status"><span class="dot"></span><span class="status-label">Offline</span></div>
         </div>
         <div class="name">Tara</div>
         <div class="meta">Recruitment Agent · Screen 2</div>
+        <div class="activity" aria-live="polite">Checking status…</div>
         <span class="open">Open desktop <span class="arrow">→</span></span>
       </a>
 
-      <a class="card" href="/screen/3/" aria-label="Open Atlas desktop">
+      <a class="card" href="/screen/3/" aria-label="Open Atlas desktop" data-screen="3" data-agent="Atlas" data-state="offline">
         <div class="card-top">
           <div class="screen-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
           </div>
-          <div class="status"><span class="dot"></span>Online</div>
+          <div class="status"><span class="dot"></span><span class="status-label">Offline</span></div>
         </div>
         <div class="name">Atlas</div>
-        <div class="meta">GBAsset &amp; EasyDCIM Agent · Screen 3</div>
+        <div class="meta">Systems Strategy Agent · Screen 3</div>
+        <div class="activity" aria-live="polite">Checking status…</div>
         <span class="open">Open desktop <span class="arrow">→</span></span>
       </a>
 
-      <a class="card" href="/screen/4/" aria-label="Open Mira desktop">
+      <a class="card" href="/screen/4/" aria-label="Open Mira desktop" data-screen="4" data-agent="Mira" data-state="offline">
         <div class="card-top">
           <div class="screen-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
           </div>
-          <div class="status"><span class="dot"></span>Online</div>
+          <div class="status"><span class="dot"></span><span class="status-label">Offline</span></div>
         </div>
         <div class="name">Mira</div>
         <div class="meta">Product Design &amp; UX Agent · Screen 4</div>
+        <div class="activity" aria-live="polite">Checking status…</div>
         <span class="open">Open desktop <span class="arrow">→</span></span>
       </a>
     </section>
 
-    <footer>Persistent desktops · Shared workspace</footer>
+    <footer>A coordinated AI team · Ready when needed</footer>
   </main>
+  <script>
+    const stateLabels = {
+      idle: "Ready",
+      working: "Working",
+      waiting_approval: "Waiting",
+      error: "Attention",
+      offline: "Offline"
+    };
+    const activityCopy = {
+      1: { idle: "Ready to coordinate", working: "Coordinating operations" },
+      2: { idle: "Ready for recruitment", working: "Reviewing candidates" },
+      3: { idle: "Ready for strategy work", working: "Designing systems workflow" },
+      4: { idle: "Ready for product design", working: "Designing product experience" }
+    };
+    const genericActivity = {
+      waiting_approval: "Waiting for owner approval",
+      error: "Ready for review",
+      offline: "Status unavailable"
+    };
+    const cards = Array.from(document.querySelectorAll(".card[data-screen]"));
+
+    function applyStatus(card, state) {
+      const screen = Number(card.dataset.screen);
+      const normalized = Object.prototype.hasOwnProperty.call(stateLabels, state) ? state : "offline";
+      card.dataset.state = normalized;
+      card.querySelector(".status-label").textContent = stateLabels[normalized];
+      card.querySelector(".activity").textContent =
+        activityCopy[screen]?.[normalized] || genericActivity[normalized] || "Status unavailable";
+    }
+
+    function updateSummary() {
+      const working = cards.filter(card => card.dataset.state === "working").length;
+      const available = cards.filter(card => card.dataset.state !== "offline").length;
+      const label = `${available} screens available${working ? ` · ${working} working` : ""}`;
+      document.querySelector("#team-summary span:last-child").textContent = label;
+    }
+
+    async function refreshCard(card) {
+      const screen = card.dataset.screen;
+      const agent = card.dataset.agent;
+      try {
+        const response = await fetch(`/status/screen-${screen}.json`, { cache: "no-store" });
+        if (!response.ok) throw new Error("status unavailable");
+        const payload = await response.json();
+        if (payload.screen !== Number(screen) || payload.agent !== agent) throw new Error("status mismatch");
+        applyStatus(card, payload.state);
+      } catch (_) {
+        applyStatus(card, "offline");
+      }
+    }
+
+    async function refreshStatuses() {
+      await Promise.all(cards.map(refreshCard));
+      updateSummary();
+    }
+
+    refreshStatuses();
+    setInterval(refreshStatuses, 5000);
+  </script>
 </body>
 </html>

@@ -446,6 +446,28 @@ class ScreenRuntimeTests(unittest.TestCase):
         self.assertNotIn("vnc.html", combined)
         self.assertNotIn("vnc_lite.html", combined)
 
+    def test_landing_reports_public_safe_live_agent_status(self):
+        landing = (ROOT / "web/index.html").read_text()
+
+        self.assertIn('data-screen="1" data-agent="Iris"', landing)
+        self.assertIn('data-screen="3" data-agent="Atlas"', landing)
+        self.assertIn('Systems Strategy Agent · Screen 3', landing)
+        self.assertNotIn('GBAsset', landing)
+        self.assertNotIn('EasyDCIM', landing)
+        self.assertIn('/status/screen-${screen}.json', landing)
+        self.assertIn('cache: "no-store"', landing)
+        self.assertIn('setInterval(refreshStatuses, 5000)', landing)
+        self.assertIn('working: "Working"', landing)
+        self.assertIn('idle: "Ready"', landing)
+        self.assertIn('waiting_approval: "Waiting"', landing)
+        self.assertIn('error: "Attention"', landing)
+        self.assertIn('offline: "Offline"', landing)
+        self.assertIn('data-state="working"', landing)
+        self.assertIn('class="activity"', landing)
+        self.assertIn('aria-live="polite"', landing)
+        self.assertIn('@keyframes statusPulse', landing)
+        self.assertIn('prefers-reduced-motion: reduce', landing)
+
     def test_viewer_has_unified_agent_command_header(self):
         viewer = (ROOT / "web/viewer.html").read_text()
 
@@ -455,7 +477,12 @@ class ScreenRuntimeTests(unittest.TestCase):
         self.assertIn('data-agent-name="Tara"', viewer)
         self.assertIn('data-agent-role="Recruitment Agent"', viewer)
         self.assertIn('data-agent-name="Atlas"', viewer)
-        self.assertIn('data-agent-role="GBAsset &amp; EasyDCIM Agent"', viewer)
+        self.assertIn('data-agent-role="Systems Strategy Agent"', viewer)
+        self.assertNotIn('GBAsset', viewer)
+        self.assertNotIn('EasyDCIM', viewer)
+        self.assertNotIn('payload.task', viewer)
+        self.assertIn('publicStatusTask', viewer)
+        self.assertIn('Designing systems workflow', viewer)
         self.assertIn('data-agent-name="Mira"', viewer)
         self.assertIn('data-agent-role="Product Design &amp; UX Agent"', viewer)
         self.assertIn('#screen-switcher a[data-screen="1"] .screen-link-dot{background:#8b5cf6;box-shadow:0 0 0 3px #8b5cf633}', viewer)
