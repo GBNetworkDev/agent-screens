@@ -112,7 +112,7 @@ sudo bin/update_screen_status.py \
   --screen 3 \
   --agent Atlas \
   --state idle \
-  --task "Ready for GBAsset work"
+  --task "Ready for strategy work"
 
 sudo bin/update_screen_status.py \
   --screen 4 \

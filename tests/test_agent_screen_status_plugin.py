@@ -402,12 +402,12 @@ class AgentScreenStatusIntegrationTests(unittest.TestCase):
             tool_name="mcp__cua_screen4__capture", turn_id="t1"
         )
         self.assertEqual(self.specialist_events, [
-            (3, "working", "Working in GBAsset workspace"),
+            (3, "working", "Designing systems workflow"),
             (4, "working", "Working on product design"),
         ])
         self.module._on_session_end(**turn, completed=True, failed=False)
         self.assertEqual(self.specialist_events[-2:], [
-            (3, "idle", "Ready for GBAsset work"),
+            (3, "idle", "Ready for strategy work"),
             (4, "idle", "Ready for product design work"),
         ])
 

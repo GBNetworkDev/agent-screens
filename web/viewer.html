@@ -126,10 +126,10 @@
         <span class="screen-link-name">TARA · S2</span>
         <span class="screen-link-role">Recruitment Agent</span>
       </a>
-      <a href="/screen/3/" data-screen="3" data-agent="Atlas" data-agent-name="Atlas" data-agent-role="GBAsset &amp; EasyDCIM Agent">
+      <a href="/screen/3/" data-screen="3" data-agent="Atlas" data-agent-name="Atlas" data-agent-role="Systems Strategy Agent">
         <span class="screen-link-dot" aria-hidden="true"></span>
         <span class="screen-link-name">ATLAS · S3</span>
-        <span class="screen-link-role">GBAsset &amp; EasyDCIM Agent</span>
+        <span class="screen-link-role">Systems Strategy Agent</span>
       </a>
       <a href="/screen/4/" data-screen="4" data-agent="Mira" data-agent-name="Mira" data-agent-role="Product Design &amp; UX Agent">
         <span class="screen-link-dot" aria-hidden="true"></span>
@@ -391,11 +391,31 @@
     agentStatusActivity.textContent = relativeTime(statusUpdatedAt);
   }
 
-  function setAgentStatus(state, task, updatedAt = "") {
+  function publicStatusTask(state) {
+    const workingByScreen = {
+      "1": "Coordinating operations",
+      "2": "Reviewing candidates",
+      "3": "Designing systems workflow",
+      "4": "Designing product experience"
+    };
+    const readyByScreen = {
+      "1": "Ready to coordinate",
+      "2": "Ready for recruitment",
+      "3": "Ready for strategy work",
+      "4": "Ready for product design"
+    };
+    if (state === "working") return workingByScreen[screenNumber] || "Working";
+    if (state === "idle") return readyByScreen[screenNumber] || "Ready";
+    if (state === "waiting_approval") return "Waiting for owner approval";
+    if (state === "error") return "Ready for review";
+    return "Status unavailable";
+  }
+
+  function setAgentStatus(state, updatedAt = "") {
     const safeState = Object.hasOwn(statusLabels, state) ? state : "offline";
     commandHeader.dataset.state = safeState;
     agentStatusState.textContent = statusLabels[safeState];
-    agentStatusTask.textContent = task || `${activeAgent.role} unavailable`;
+    agentStatusTask.textContent = publicStatusTask(safeState);
     statusUpdatedAt = updatedAt;
     refreshRelativeTime();
   }
@@ -406,9 +426,9 @@
       if (!response.ok) throw new Error(`status ${response.status}`);
       const payload = await response.json();
       if (payload.schema !== 1 || payload.screen !== Number(screenNumber) || payload.agent !== activeAgent.name) throw new Error("invalid status payload");
-      setAgentStatus(payload.state, payload.task, payload.updated_at);
+      setAgentStatus(payload.state, payload.updated_at);
     } catch (_error) {
-      setAgentStatus("offline", `${activeAgent.role} unavailable`);
+      setAgentStatus("offline");
     }
   }
 
